@@ -1,0 +1,57 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+.game-container {
+  width: 360px;
+  height: 360px;
+  margin: 20px auto;
+  border: 2px solid #000;
+  position: relative;
+  background-color: #e0e0e0;
+}
+
+/* style for grid that shows the map using tilemap and image i preload */
+.bomberman-map {
+    display: grid;
+    grid-template-columns: repeat(3, 32px);
+    gap: 0;
+    width: 320px;
+    height: 320px;
+}
+
+/* base tile style */
+.map-cell {
+    width: 64px;
+    height: 64px;
+  background: url("/app/assets/Gemini_Generated_Image_gdyqa6gdyqa6gdyq.png") no-repeat;
+    background-size: 620px 620px; /* 5x5 tilesheet of 32px tiles */
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    
+}
+
+/* Pick each tile from the tilemap */
+.stone { background-position: 0 0; }
+.water { background-position: -32px 0; }
+.grass { background-position: -64px 0; }
+
+
+.map-row {
+  display: contents;
+}
+
+
+.grass {
+  background-position: -0px -0px;
+}
+.water {
+  background-position: -32px -0px;
+}
+.stone {
+  background-position: -64px -0px;
+}
