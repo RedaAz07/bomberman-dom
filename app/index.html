@@ -1,152 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bomberman 360x360 Map</title>
-    <style>
-      body {
-        background-color: #1a1a1a;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-      }
 
-      /* --- THE 360x360 WORLD --- */
-      #game-world {
-        position: relative;
-        /* 9 columns * 40px = 360px */
-        width: 360px;
-        /* 9 rows * 40px = 360px */
-        height: 360px;
-        background-color: #2e4e35;
-        overflow: hidden;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        border: 4px solid #000;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bomberman 360x360 Map</title>
+  <style>
+    body {
+      background-color: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
 
-      .sprite {
-        position: absolute;
-        /* New Tile Size */
-        width: 40px;
-        height: 40px;
-        background-image: url("./assets/map3.png");
-        background-repeat: no-repeat;
+    /* --- THE 360x360 WORLD --- */
+    #game-world {
+      position: relative;
+      /* 9 columns * 40px = 360px */
+      width: 576px;
+      /* 9 rows * 40px = 360px */
+      height: 576px;
+      background-color: #2e4e35;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      border: 4px solid #000;
+    }
 
-        /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
-        /* Assuming the original image was roughly 1024px wide (16 tiles) */
-        /* We scale it down to 62.5% of its original size */
-        background-size: 200px 200px;
-        will-change: transform;
-        top: 0;
-        left: 0;
-      }
+    .sprite {
+      position: absolute;
+      /* New Tile Size */
+      width: 64px;
+      height: 64px;
+      background-image: url("./assets/map3.png");
+      background-repeat: no-repeat;
 
-      /* --- TILE DEFINITIONS (Scaled Coordinates) --- */
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: 320px 320px;
+      will-change: transform;
+      top: 0;
+      left: 0;
+    }
 
-      .tile-wall {
-        /* Original: 0 0 */
-        background-position: 0px 0px;
-        z-index: 10;
-      }
+    /* --- TILE DEFINITIONS (Scaled Coordinates) --- */
 
-      .tile-block {
-        /* Original: 0px -256px (Row 4) */
-        /* Scaled: -256 * 0.625 = -160 */
-        background-position: 0px -160px;
-        z-index: 5;
-        transition: opacity 0.2s, transform 0.2s;
-      }
+    .tile-wall {
+      /* Original: 0 0 */
+      background-position: 0px 0px;
+      z-index: 10;
+    }
 
-      .tile-floor {
-        /* Original: -64px 0px (Col 1) */
-        /* Scaled: -64 * 0.625 = -40 */
-        z-index: 0;
-      }
+    .tile-block {
+      /* Original: 0px -256px (Row 4) */
+      /* Scaled: -256 * 0.625 = -160 */
+      background-position: 0px -160px;
+      z-index: 5;
+      transition: opacity 0.2s, transform 0.2s;
+    }
 
-      .tile-player {
-        /* Original: -512px 0px (Col 8) */
-        /* Scaled: -512 * 0.625 = -320 */
-        background-position: -320px 0px;
-        z-index: 20;
-      }
+    .tile-floor {
+      /* Original: -64px 0px (Col 1) */
+      /* Scaled: -64 * 0.625 = -40 */
+      z-index: 0;
+    }
 
-      .broken {
-        opacity: 0;
-        transform: scale(0.5);
-      }
-    </style>
-  </head>
-  <body>
-    <div id="game-world"></div>
+    .tile-player {
+      /* Original: -512px 0px (Col 8) */
+      /* Scaled: -512 * 0.625 = -320 */
+      background-position: -320px 0px;
+      z-index: 20;
+    }
 
-    <script>
-      // NEW TILE SIZE
-      const TILE_SIZE = 40;
-      const GAME_WIDTH = 360;
-      const GAME_HEIGHT = 360;
-      const COLS = GAME_WIDTH / TILE_SIZE;
-      const ROWS = GAME_HEIGHT / TILE_SIZE;
-      const WORLD = document.getElementById("game-world");
-      const IMAGE_WIDTH = 160;
-      const IMAGE_COLS = IMAGE_WIDTH / TILE_SIZE;
+    .broken {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  </style>
+</head>
 
-      // --- 9x9 MAP DATA (Standard Bomberman Layout) ---
-      // 1 = Solid Wall
-      // 0 = Floor
-      // 2 = Breakable Block
-      const LEVEL1 = [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 0
-        [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 1
-        [1, 0, 1, 2, 1, 2, 1, 0, 1], // Row 2 (Pillars)
-        [1, 2, 2, 2, 2, 2, 2, 2, 1], // Row 3
-        [1, 2, 1, 2, 1, 2, 1, 2, 1], // Row 4 (Center Pillars)
-        [1, 2, 2, 2, 2, 2, 2, 2, 1], // Row 5
-        [1, 0, 1, 2, 1, 2, 1, 0, 1], // Row 6 (Pillars)
-        [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 7
-        [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 8
-      ];
-      function getTile(col, row) {
-        return LEVEL1[row][col];
-      }
+<body>
+  <div id="game-world"></div>
 
-      function generateMap() {
-        const fragment = document.createDocumentFragment();
+  <script>
+    // NEW TILE SIZE
+    const TILE_SIZE = 64;
+    const GAME_WIDTH = 576;
+    const GAME_HEIGHT = 576;
+    const COLS = GAME_WIDTH / TILE_SIZE;
+    const ROWS = GAME_HEIGHT / TILE_SIZE;
+    const WORLD = document.getElementById("game-world");
+    const IMAGE_WIDTH = 320;
+    const IMAGE_COLS = IMAGE_WIDTH / TILE_SIZE;
 
-        for (let row = 0; row < ROWS; row++) {
-          for (let col = 0; col < COLS; col++) {
-            const type = getTile(col, row);
-            const x = col * TILE_SIZE;
-            const y = row * TILE_SIZE;
+    // --- 9x9 MAP DATA (Standard Bomberman Layout) ---
+    // 1 = Solid Wall
+    // 0 = Floor
+    // 2 = Breakable Block
+    const LEVEL1 = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 0
+      [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 1
+      [1, 0, 1, 0, 1, 0, 1, 0, 1], // Row 2 (Pillars)
+      [1, 2, 0, 2, 2, 2, 0, 2, 1], // Row 3
+      [1, 2, 1, 2, 1, 2, 1, 2, 1], // Row 4 (Center Pillars)
+      [1, 2, 0, 2, 2, 2, 0, 2, 1], // Row 5
+      [1, 0, 1, 0, 1, 0, 1, 0, 1], // Row 6 (Pillars)
+      [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 7
+      [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 8
+    ];
+    function getTile(col, row) {
+      return LEVEL1[row][col];
+    }
 
-            // 1. Floor everywhere
-            createTile(fragment, "tile-floor", x, y, type);
-          }
+    function generateMap() {
+      const fragment = document.createDocumentFragment();
+
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const type = getTile(col, row);
+          const x = col * TILE_SIZE;
+          const y = row * TILE_SIZE;
+
+          // 1. Floor everywhere
+          createTile(fragment, "tile-floor", x, y, type);
         }
-
-        WORLD.appendChild(fragment);
       }
 
-      function createTile(container, className, x, y, type) {
-        const el = document.createElement("div");
-        el.className = `sprite ${className}`;
-        // Using translate3d for 60fps performance
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-        el.style.backgroundPosition = `
+      WORLD.appendChild(fragment);
+    }
+
+    function createTile(container, className, x, y, type) {
+      const el = document.createElement("div");
+      el.className = `sprite ${className}`;
+      // Using translate3d for 60fps performance
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      el.style.backgroundPosition = `
         ${-(type * TILE_SIZE) % IMAGE_WIDTH}px 
         ${-Math.floor(type / IMAGE_COLS) * TILE_SIZE}px`;
-        container.appendChild(el);
-        return el;
-      }
+      container.appendChild(el);
+      return el;
+    }
 
-      function spawnPlayer(col, row) {
-        // Calculates position based on the new 40px tile size
-        createTile(WORLD, "tile-player", col * TILE_SIZE, row * TILE_SIZE);
-      }
+    function spawnPlayer(col, row) {
+      // Calculates position based on the new 40px tile size
+      createTile(WORLD, "tile-player", col * TILE_SIZE, row * TILE_SIZE);
+    }
 
-      generateMap();
-    </script>
-  </body>
+    generateMap();
+  </script>
+</body>
+
 </html>
