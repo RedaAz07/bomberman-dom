@@ -1,0 +1,30 @@
+.tile {
+    width: 32px;
+    height: 32px;
+    background-image: url("/client/assets/images/map.png");
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+
+.tile-ground {
+    background-position: 0px 0px;
+}
+
+.tile-stone {
+    background-position: -32px 0px;
+}
+
+.tile-wall {
+    background-position: -64px 0px;
+}
+
+
+.map-container {
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+}
+
+.map-row {
+    display: flex;
+}
