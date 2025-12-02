@@ -13,7 +13,6 @@ function getRoot() {
   if (!root) {
     root = document.getElementById("root");
     if (!root) {
-      console.warn("Element with id 'root' not found, using document.body");
       document.body.innerHTML = "";
       root = document.body;
     }

@@ -48,3 +48,8 @@ export function handleRouteChange() {
     render(notFound);
   }
 }
+
+
+export const navigate = (path) => {
+  window.location.hash = path;
+};

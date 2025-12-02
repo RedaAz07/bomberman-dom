@@ -2,8 +2,8 @@ import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
-
 const PORT = 3000;
+const players = [];
 
 const base = path.join(process.cwd(), "..", "mini-framework");
 console.log(process.cwd());
@@ -26,13 +26,7 @@ const server = createServer(async (req, res) => {
         if (req.url === "/") {
             reqPath = "app/index.html";
         } else {
-
-
-
             const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
-
-
-
             if (cleanUrl.startsWith("framework/")) {
                 reqPath = cleanUrl;
             } else {
@@ -59,31 +53,60 @@ const server = createServer(async (req, res) => {
 });
 
 
-
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws) => {
-    ws.on('message', message => {
-        let data = {}
-        try {
-            data = JSON.parse(message)
-        } catch (error) {
-            console.log(error);
+wss.on("connection", (socket) => {
 
+    socket.on("message", (msg) => {
+        const data = JSON.parse(msg);
+        console.log(data, "message received from client");
+
+        if (data.type === "join") {
+            const username = data.username.trim();
+
+            if (players.includes(username)) {
+                socket.send(JSON.stringify({
+                    type: "join-error",
+                    msg: "Username already taken!"
+                }));
+                return;
+            }
+
+            players.push(username);
+            socket.username = username;
+
+            socket.send(JSON.stringify({
+                type: "join-success",
+                username,
+            }));
+
+            broadcast({
+                type: "player-list",
+                players: [...players]
+            });
+
+            return;
         }
+    });
 
+    socket.on("close", () => {
+        if (socket.username) {
+            players.delete(socket.username);
 
-        switch (data.type) {
-            case "newPlayer":
-                
-                break;
-        
-            default:
-                break;
+            broadcast({
+                type: "player-list",
+                players: [...players]
+            });
         }
-    })
+    });
 });
 
-server.listen(PORT, () =>
-    console.log(`Server running on http://localhost:${PORT}`)
-);
+function broadcast(obj) {
+    for (const client of wss.clients) {
+        if (client.readyState === 1) {
+            client.send(JSON.stringify(obj));
+        }
+    }
+}
+
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

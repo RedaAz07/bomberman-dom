@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Store } from "./core/hooks.js";
 import { jsx } from "./core/jsx.js";
-import { addRoute } from "./core/route.js";
+import { addRoute, navigate } from "./core/route.js";
 import { handleRouteChange } from "./core/route.js";
 
 /**
@@ -18,4 +18,4 @@ export function startTransition() {
   handleRouteChange();
   window.addEventListener("hashchange", handleRouteChange);
 }
-export { useState, useEffect, useRef, jsx, addRoute, Store };
+export { useState, useEffect, useRef, jsx, addRoute, Store, navigate };
