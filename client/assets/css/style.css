@@ -1,30 +1,36 @@
+body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+
+
+.map-row {
+    display: flex;
+}
+
 .tile {
-    width: 32px;
-    height: 32px;
-    background-image: url("/client/assets/images/map.png");
+    width: 48px;
+    height: 48px;
+    background-size: cover;
     background-repeat: no-repeat;
     image-rendering: pixelated;
 }
 
-.tile-ground {
-    background-position: 0px 0px;
-}
-
-.tile-stone {
-    background-position: -32px 0px;
+.tile-grass {
+    background-image: url("/client/assets/images/grass.png");
 }
 
 .tile-wall {
-    background-position: -64px 0px;
+    background-image: url("/client/assets/images/wall3.png");
 }
 
-
-.map-container {
-    display: flex;
-    flex-direction: column;
-    width: fit-content;
-}
-
-.map-row {
-    display: flex;
+.tile-braml {
+    background-image: url("/client/assets/images/brmil.png");
 }
