@@ -6,6 +6,7 @@ import { WebSocketServer } from "ws";
 const PORT = 3000;
 
 const base = path.join(process.cwd(), "..", "mini-framework");
+console.log(process.cwd());
 
 const mime = {
     ".html": "text/html",
@@ -18,13 +19,14 @@ const mime = {
 };
 
 const server = createServer(async (req, res) => {
+
     try {
         let reqPath;
 
         if (req.url === "/") {
             reqPath = "app/index.html";
         } else {
-      
+
 
 
             const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
@@ -51,8 +53,8 @@ const server = createServer(async (req, res) => {
         res.end(content);
 
     } catch (err) {
-       /*  res.writeHead(404, { "Content-Type": "text/plain" });
-        res.end("404 Not Found"); */
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("404 Not Found");
     }
 });
 
@@ -61,9 +63,25 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws) => {
-    console.log("client connected!");
+    ws.on('message', message => {
+        let data = {}
+        try {
+            data = JSON.parse(message)
+        } catch (error) {
+            console.log(error);
 
-    ws.send("hello!");
+        }
+
+
+        switch (data.type) {
+            case "newPlayer":
+                
+                break;
+        
+            default:
+                break;
+        }
+    })
 });
 
 server.listen(PORT, () =>
