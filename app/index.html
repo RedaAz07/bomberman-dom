@@ -31,15 +31,15 @@
     .sprite {
       position: absolute;
       /* New Tile Size */
-      width: 64px;
-      height: 64px;
-      background-image: url("./assets/map3.png");
+      width:64px;
+      height:64px;
+      background-image: url("./assets/map10.jpg");
       background-repeat: no-repeat;
 
       /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
       /* Assuming the original image was roughly 1024px wide (16 tiles) */
       /* We scale it down to 62.5% of its original size */
-      background-size: 320px 320px;
+      background-size: cover;
       will-change: transform;
       top: 0;
       left: 0;
@@ -48,8 +48,20 @@
     /* --- TILE DEFINITIONS (Scaled Coordinates) --- */
 
     .tile-wall {
-      /* Original: 0 0 */
-      background-position: 0px 0px;
+      position: absolute;
+      /* New Tile Size */
+      width:64px;
+      height:64px;
+      background-image: url("./assets/map11.png");
+      background-repeat: no-repeat;
+
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: cover;
+      will-change: transform;
+      top: 0;
+      left: 0;
       z-index: 10;
     }
 
@@ -86,14 +98,12 @@
 
   <script>
     // NEW TILE SIZE
-    const TILE_SIZE = 64;
+    const TILE_SIZE =64;
     const GAME_WIDTH = 576;
     const GAME_HEIGHT = 576;
     const COLS = GAME_WIDTH / TILE_SIZE;
     const ROWS = GAME_HEIGHT / TILE_SIZE;
     const WORLD = document.getElementById("game-world");
-    const IMAGE_WIDTH = 320;
-    const IMAGE_COLS = IMAGE_WIDTH / TILE_SIZE;
 
     // --- 9x9 MAP DATA (Standard Bomberman Layout) ---
     // 1 = Solid Wall
@@ -133,12 +143,16 @@
 
     function createTile(container, className, x, y, type) {
       const el = document.createElement("div");
-      el.className = `sprite ${className}`;
+      el.className = `sprite`;
+      if (type === 2) {
+
+        el.className = `tile-wall`;
+      }
       // Using translate3d for 60fps performance
       el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-      el.style.backgroundPosition = `
-        ${-(type * TILE_SIZE) % IMAGE_WIDTH}px 
-        ${-Math.floor(type / IMAGE_COLS) * TILE_SIZE}px`;
+      // el.style.backgroundPosition = `
+      //   ${-(type * TILE_SIZE) % IMAGE_WIDTH}px 
+      //   ${-Math.floor(type / IMAGE_COLS) * TILE_SIZE}px`;
       container.appendChild(el);
       return el;
     }
