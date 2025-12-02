@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { WebSocketServer } from "ws";
 
 const PORT = 3000;
 
@@ -19,14 +20,17 @@ const mime = {
 const server = createServer(async (req, res) => {
     try {
         let reqPath;
-     
+
         if (req.url === "/") {
             reqPath = "app/index.html";
         } else {
+      
+
+
             const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
-            
-            // If it starts with "framework/", use it directly
-            // Otherwise, prepend "app/"
+
+
+
             if (cleanUrl.startsWith("framework/")) {
                 reqPath = cleanUrl;
             } else {
@@ -35,8 +39,7 @@ const server = createServer(async (req, res) => {
         }
 
         const fullPath = path.join(base, reqPath);
-        
-        await fs.access(fullPath);
+
 
         const ext = path.extname(fullPath);
         const type = mime[ext] || "text/plain";
@@ -48,10 +51,19 @@ const server = createServer(async (req, res) => {
         res.end(content);
 
     } catch (err) {
-        console.error("Error:", err.message);
-        res.writeHead(404, { "Content-Type": "text/plain" });
-        res.end("404 Not Found");
+       /*  res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("404 Not Found"); */
     }
+});
+
+
+
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws) => {
+    console.log("client connected!");
+
+    ws.send("hello!");
 });
 
 server.listen(PORT, () =>
