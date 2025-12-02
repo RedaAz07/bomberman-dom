@@ -5,10 +5,10 @@ import { navigate } from "../../framework/main.js";
 export function Join() {
     const [name, setName] = useState("");
     const [error, setError] = useState("");
-console.log("151",name);
+        console.log("----------",name);
 
     const handleJoin = () => {
-        console.log(name);
+        console.log("+++++++++++",name);
         
         if (!name.trim()) return;
 

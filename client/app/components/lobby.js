@@ -5,14 +5,14 @@ export function Lobby() {
     const [msg, setMsg] = useState("");
     const [players, setPlayers] = useState([]);
     const [chat, setChat] = useState([]);
-console.log(msg);
-function sendMsg() {
     console.log(msg);
-    if (msg.trim()) {
-        
-        ws.send(JSON.stringify({ username: ws.username, type: "message", msg }));
+    function sendMsg() {
+        console.log(msg);
+        if (msg.trim()) {
+
+            ws.send(JSON.stringify({ username: ws.username, type: "message", msg }));
+        }
     }
-}
 
     useEffect(() => {
         ws.onmessage = (event) => {
@@ -40,15 +40,15 @@ function sendMsg() {
         jsx("div", null,
             jsx("input", {
                 value: msg,
-            oninput: (e) => setMsg(e.target.value),
+                oninput: (e) => setMsg(e.target.value),
 
                 placeholder: "Say something..."
             }),
-            jsx("button", { onclick:sendMsg }, "Send")
+            jsx("button", { onclick: sendMsg }, "Send")
         ),
 
         jsx("div", { class: "chat-box" },
-            ...chat.map(c =>
+            chat.map(c =>
                 jsx("p", null, c.username + ": " + c.msg)
             )
         )
