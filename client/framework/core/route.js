@@ -1,4 +1,5 @@
 import { startTransition } from "../main.js";
+import { clearStates } from "./hooks.js";
 import { notFound } from "./notfound.js";
 import { render } from "./render.js";
 
@@ -42,6 +43,7 @@ export function addRoute(path, callback) {
 
 export function handleRouteChange() {
   const route = window.location.hash.slice(1) || "/";
+  clearStates();
   if (routes[route]) {
     render(routes[route]);
   } else {

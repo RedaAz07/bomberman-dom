@@ -39,7 +39,7 @@ export function render(App) {
   if (App) rootElements = App;
   
   
-  clearhooks(true);
+  clearhooks();
   const newVDOM = rootElements(); // new virtual DOM
   
   updateElement(root, newVDOM, oldVDOM); // diff & patch
