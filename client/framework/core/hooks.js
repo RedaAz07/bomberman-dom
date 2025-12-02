@@ -14,10 +14,13 @@ let refIndex = 0;
  *
  * @returns {void}
  */
-export function clearhooks() {
+export function clearhooks(clear) {
   stateIndex = 0;
   effectIndex = 0;
   pindingEffects = [];
+  if (clear) {
+    states = []
+  }
 }
 
 /**

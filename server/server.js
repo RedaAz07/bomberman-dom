@@ -5,7 +5,7 @@ import { WebSocketServer } from "ws";
 const PORT = 3000;
 const players = [];
 
-const base = path.join(process.cwd(), "..", "mini-framework");
+const base = path.join(process.cwd(), "..", "client");
 console.log(process.cwd());
 
 const mime = {
@@ -87,11 +87,21 @@ wss.on("connection", (socket) => {
 
             return;
         }
+        if (data.type === "message") {
+            broadcast({
+                type: "message",
+                username: data.username,
+                msg: data.msg
+            });
+        }
     });
 
     socket.on("close", () => {
         if (socket.username) {
-            players.delete(socket.username);
+            const index = players.indexOf(socket.username);
+            if (index !== -1) {
+                players.splice(index, 1);
+            }
 
             broadcast({
                 type: "player-list",

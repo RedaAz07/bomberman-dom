@@ -5,8 +5,11 @@ import { navigate } from "../../framework/main.js";
 export function Join() {
     const [name, setName] = useState("");
     const [error, setError] = useState("");
+console.log("151",name);
 
     const handleJoin = () => {
+        console.log(name);
+        
         if (!name.trim()) return;
 
         ws.send(JSON.stringify({
@@ -37,7 +40,7 @@ export function Join() {
             oninput: (e) => setName(e.target.value)
         }),
 
-        jsx("button", { onclick: handleJoin }, "Join"),
+        jsx("button", { onclick: handleJoin, }, "Join"),
 
         error && jsx("p", { style: "color:red" }, error)
     );

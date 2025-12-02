@@ -37,11 +37,12 @@ function getRoot() {
 export function render(App) {
   getRoot();
   if (App) rootElements = App;
-  pindingEffects.forEach((fn) => fn());
-
-  clearhooks();
+  
+  
+  clearhooks(true);
   const newVDOM = rootElements(); // new virtual DOM
-
+  
   updateElement(root, newVDOM, oldVDOM); // diff & patch
   oldVDOM = newVDOM; // save for next render
+  pindingEffects.forEach((fn) => fn());
 }
