@@ -19,9 +19,9 @@
     #game-world {
       position: relative;
       /* 9 columns * 40px = 360px */
-      width: 576px;
+      width: 750px;
       /* 9 rows * 40px = 360px */
-      height: 576px;
+      height: 750px;
       background-color: #2e4e35;
       overflow: hidden;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -31,15 +31,8 @@
     .sprite {
       position: absolute;
       /* New Tile Size */
-      width:64px;
-      height:64px;
-      background-image: url("./assets/map10.jpg");
-      background-repeat: no-repeat;
-
-      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
-      /* Assuming the original image was roughly 1024px wide (16 tiles) */
-      /* We scale it down to 62.5% of its original size */
-      background-size: cover;
+      width: 50px;
+      height: 50px;
       will-change: transform;
       top: 0;
       left: 0;
@@ -48,11 +41,50 @@
     /* --- TILE DEFINITIONS (Scaled Coordinates) --- */
 
     .tile-wall {
-      position: absolute;
       /* New Tile Size */
-      width:64px;
-      height:64px;
-      background-image: url("./assets/map11.png");
+      background-image: url("./assets/map21.jpg");
+
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: cover;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: 10;
+    }
+
+    .tile-wall-edge {
+      /* New Tile Size */
+      background-image: url("./assets/map23.jpg");
+
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: cover;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: 10;
+    }
+
+    .tile-block {
+
+
+      background-image: url("./assets/map20.jpg");
+      background-repeat: no-repeat;
+
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: cover;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+
+      z-index: 5;
+    }
+
+    .tile-floor {
+
+      background-image: url("./assets/map19.jpg");
       background-repeat: no-repeat;
 
       /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
@@ -60,22 +92,22 @@
       /* We scale it down to 62.5% of its original size */
       background-size: cover;
       will-change: transform;
-      top: 0;
-      left: 0;
-      z-index: 10;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: 0;
     }
 
-    .tile-block {
-      /* Original: 0px -256px (Row 4) */
-      /* Scaled: -256 * 0.625 = -160 */
-      background-position: 0px -160px;
-      z-index: 5;
-      transition: opacity 0.2s, transform 0.2s;
-    }
+    .tile-stone {
+      background-image: url("./assets/map35.jpg");
+      background-repeat: no-repeat;
 
-    .tile-floor {
-      /* Original: -64px 0px (Col 1) */
-      /* Scaled: -64 * 0.625 = -40 */
+      /* --- SCALING THE 64px IMAGE DOWN TO 40px --- */
+      /* Assuming the original image was roughly 1024px wide (16 tiles) */
+      /* We scale it down to 62.5% of its original size */
+      background-size: cover;
+      will-change: transform;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
       z-index: 0;
     }
 
@@ -98,27 +130,35 @@
 
   <script>
     // NEW TILE SIZE
-    const TILE_SIZE =64;
-    const GAME_WIDTH = 576;
-    const GAME_HEIGHT = 576;
+    const TILE_SIZE = 50;
+    const GAME_WIDTH = 750;
+    const GAME_HEIGHT = 750;
     const COLS = GAME_WIDTH / TILE_SIZE;
     const ROWS = GAME_HEIGHT / TILE_SIZE;
     const WORLD = document.getElementById("game-world");
+    const IMAGE_WIDTH = 35;
+    const IMAGE_COLS = IMAGE_WIDTH / TILE_SIZE;
 
     // --- 9x9 MAP DATA (Standard Bomberman Layout) ---
     // 1 = Solid Wall
     // 0 = Floor
     // 2 = Breakable Block
     const LEVEL1 = [
-      [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 0
-      [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 1
-      [1, 0, 1, 0, 1, 0, 1, 0, 1], // Row 2 (Pillars)
-      [1, 2, 0, 2, 2, 2, 0, 2, 1], // Row 3
-      [1, 2, 1, 2, 1, 2, 1, 2, 1], // Row 4 (Center Pillars)
-      [1, 2, 0, 2, 2, 2, 0, 2, 1], // Row 5
-      [1, 0, 1, 0, 1, 0, 1, 0, 1], // Row 6 (Pillars)
-      [1, 0, 0, 2, 2, 2, 0, 0, 1], // Row 7
-      [1, 1, 1, 1, 1, 1, 1, 1, 1], // Row 8
+      [3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3], // Row 0
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // Row 1
+      [1, 0, 0, 2, 0, 2, 0, 0, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 4, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 4, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 4, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 4, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 4, 0, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 0, 4, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 0, 4, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 0, 4, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 0, 4, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 2, 0, 2, 0, 0, 4, 0, 2, 0, 2, 0, 1], // Row 2 (Pillars)
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // Row 2 (Pillars)
+      [3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3], // Row 0
     ];
     function getTile(col, row) {
       return LEVEL1[row][col];
@@ -134,22 +174,65 @@
           const y = row * TILE_SIZE;
 
           // 1. Floor everywhere
-          createTile(fragment, "tile-floor", x, y, type);
+          if (type === 0) {
+
+            createTile(fragment, "tile-floor", x, y, type, row, col);
+          } else if (type === 1) {
+            createTile(fragment, "tile-wall", x, y, type, row, col);
+          } else if (type === 2) {
+            // 3. Breakable Block
+            createTile(fragment, "tile-block", x, y, type, row, col);
+          } else if (type === 3) {
+            // 4. Wall Edge
+            createTile(fragment, "tile-wall-edge", x, y, type, row, col);
+          } else if (type === 4) {
+            // 4. Stone Floor
+            createTile(fragment, "tile-stone", x, y, type, row, col);
+          }
         }
-      }
 
-      WORLD.appendChild(fragment);
+        WORLD.appendChild(fragment);
+      }
     }
-
-    function createTile(container, className, x, y, type) {
+    function createTile(container, className, x, y, type, row, col) {
       const el = document.createElement("div");
-      el.className = `sprite`;
-      if (type === 2) {
+      console.log(row, ROWS, type);
 
-        el.className = `tile-wall`;
-      }
+      el.className = `sprite ${className}`;
       // Using translate3d for 60fps performance
       el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      if (row > 0 && row < ROWS - 1 && type == 1) {
+        console.log(11111111);
+
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(90deg)`;
+        if (col < COLS - 1) {
+          el.style.backgroundImage = `url("./assets/map32.jpg")`;
+          el.style.backgroundSize = `contain`;
+          el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        }
+      }
+      if (row > 0 && row < ROWS && col < COLS - 1 && type == 1) {
+        el.style.backgroundImage = `url("./assets/map32.jpg")`;
+        el.style.backgroundSize = `contain`;
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        if (row === ROWS - 1) {
+          el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(-90deg)`;
+
+        }
+      }
+      if (row === 0 && col === COLS - 1 && type == 3) {
+        console.log(22222222);
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(90deg)`;
+      }
+      if (row === ROWS - 1 && col === 0 && type == 3) {
+        console.log(22222222);
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(-90deg)`;
+      }
+      if (row === ROWS - 1 && col === COLS - 1 && type == 3) {
+        console.log(22222222);
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(180deg)`;
+      }
+
       // el.style.backgroundPosition = `
       //   ${-(type * TILE_SIZE) % IMAGE_WIDTH}px 
       //   ${-Math.floor(type / IMAGE_COLS) * TILE_SIZE}px`;
