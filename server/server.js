@@ -2,11 +2,13 @@ import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
+
 const PORT = 3000;
 const players = [];
+let timer = null;
+let timeLeft = null;
 
 const base = path.join(process.cwd(), "..", "client");
-console.log(process.cwd());
 
 const mime = {
     ".html": "text/html",
@@ -47,17 +49,58 @@ const server = createServer(async (req, res) => {
         res.end(content);
 
     } catch (err) {
-        
+
         res.writeHead(404, { "Content-Type": "text/plain" });
         res.end("404 Not Found");
     }
 });
 
-
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (socket) => {
+function broadcast(data) {
+    const msg = JSON.stringify(data);
+    for (const client of wss.clients) {
+        if (client.readyState === 1) client.send(msg);
+    }
+}
 
+function startGameTimer() {
+    if (timer !== null) return;
+
+    // 2 or 3 players = 20s
+    // 4 players = 10s
+    if (players.length === 2 || players.length === 3) timeLeft = 20;
+    if (players.length === 4) timeLeft = 10;
+    if (players.length <= 1) return;
+
+    timer = setInterval(() => {
+        timeLeft--;
+
+        broadcast({
+            type: "counter",
+            timeLeft
+        });
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            timer = null;
+            broadcast({ type: "start-game" });
+        }
+    }, 1000);
+}
+
+function stopGameTimer() {
+    if (timer !== null) clearInterval(timer);
+    timer = null;
+    timeLeft = null;
+
+    broadcast({
+        type: "counter",
+        timeLeft: null
+    });
+}
+
+wss.on("connection", (socket) => {
     socket.on("message", (msg) => {
         const data = JSON.parse(msg);
 
@@ -65,11 +108,10 @@ wss.on("connection", (socket) => {
             const username = data.username.trim();
 
             if (players.includes(username)) {
-                socket.send(JSON.stringify({
+                return socket.send(JSON.stringify({
                     type: "join-error",
-                    msg: "Username already exist"
+                    msg: "Username already exists"
                 }));
-                return;
             }
 
             players.push(username);
@@ -77,7 +119,7 @@ wss.on("connection", (socket) => {
 
             socket.send(JSON.stringify({
                 type: "join-success",
-                username,
+                username
             }));
 
             broadcast({
@@ -85,8 +127,9 @@ wss.on("connection", (socket) => {
                 players: [...players]
             });
 
-            return;
+            startGameTimer();
         }
+
         if (data.type === "message") {
             broadcast({
                 type: "message",
@@ -99,24 +142,18 @@ wss.on("connection", (socket) => {
     socket.on("close", () => {
         if (socket.username) {
             const index = players.indexOf(socket.username);
-            if (index !== -1) {
-                players.splice(index, 1);
-            }
+            if (index !== -1) players.splice(index, 1);
 
             broadcast({
                 type: "player-list",
                 players: [...players]
             });
+
+            if (players.length <= 1) stopGameTimer();
         }
     });
 });
 
-function broadcast(obj) {
-    for (const client of wss.clients) {
-        if (client.readyState === 1) {
-            client.send(JSON.stringify(obj));
-        }
-    }
-}
-
-server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+server.listen(PORT, () =>
+    console.log(`Server running at http://localhost:${PORT}`)
+);
