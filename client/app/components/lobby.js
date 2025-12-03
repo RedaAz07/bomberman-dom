@@ -1,5 +1,5 @@
-import { jsx, useState, useEffect, useRef } from "../../framework/main.js";
-import { ws } from "../src/ws.js";
+import { jsx, useState, useEffect, useRef, navigate } from "../../framework/main.js";
+import { ws } from "../src/js/ws.js";
 
 export function Lobby() {
   const [msg, setMsg] = useState("");
@@ -8,12 +8,16 @@ export function Lobby() {
 
   const sendMsg = (e) => {
     if (!msg.trim()) return;
-    ws.send(
-      JSON.stringify({ username: ws.username, type: "message", msg: msg })
-    );
-    e.target.value = ""
+
+    ws.send(JSON.stringify({
+      username: ws.username,
+      type: "message",
+      msg
+    }));
     setMsg("");
-  }
+    e.target.value = ""
+  };
+
 
   useEffect(() => {
     ws.onmessage = (event) => {
@@ -31,6 +35,9 @@ export function Lobby() {
     };
   }, [players, msg]);
 
+  // if ( players.length === 0) {
+  //   navigate("/");
+  // }
 
   return jsx("div", { className: "container" },
     jsx("h1", null, "Game Lobby"),
@@ -65,12 +72,21 @@ export function Lobby() {
         jsx("div", { className: "chat-input-container" },
           jsx("input", {
             type: "text",
-            value: msg,
-            oninput: (e) => setMsg(e.target.value),
+            value: msg ? msg : "",
             placeholder: "Type a message...",
-            onkeypress: (e) => e.key === 'Enter' && sendMsg(e)
+            oninput: (e) => setMsg(e.target.value),
+            onkeypress: (e) => {
+              if (e.key === "Enter") {
+                sendMsg(e);
+              }
+            }
           }),
-          jsx("button", { onclick: (e) => sendMsg(e) }, "Send")
+          jsx("button", {
+            onclick: (e) => {
+              sendMsg(e);
+              e.target.previousSibling.value = "";
+            }
+          }, "Send")
         )
       )
     )
