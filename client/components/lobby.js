@@ -38,7 +38,7 @@ export function Lobby() {
         navigate("/map");
       }
     };
-  }, []);
+  }, [players,chat]);
 
   function sendMsg(e) {
     if (!msg.trim()) return;
