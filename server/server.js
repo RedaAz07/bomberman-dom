@@ -59,7 +59,7 @@ wss.on("connection", (socket) => {
 
     socket.on("message", (msg) => {
         const data = JSON.parse(msg);
-        console.log(data, "message received from client");
+        console.log(data, "hadi hiya dataaaaaaaaaaaaaa +++++++++++");
 
         if (data.type === "join") {
             const username = data.username.trim();
@@ -67,7 +67,7 @@ wss.on("connection", (socket) => {
             if (players.includes(username)) {
                 socket.send(JSON.stringify({
                     type: "join-error",
-                    msg: "Username already taken!"
+                    msg: "Username already exist"
                 }));
                 return;
             }
@@ -88,9 +88,11 @@ wss.on("connection", (socket) => {
             return;
         }
         if (data.type === "message") {
+            console.log(data, "hawaa");
+
             broadcast({
                 type: "message",
-                username: data.username,
+                username: socket.username,
                 msg: data.msg
             });
         }

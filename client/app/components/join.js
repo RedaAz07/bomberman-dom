@@ -5,17 +5,15 @@ import { navigate } from "../../framework/main.js";
 export function Join() {
     const [name, setName] = useState("");
     const [error, setError] = useState("");
-        console.log("----------",name);
 
-    const handleJoin = () => {
-        console.log("+++++++++++",name);
-        
+    const handleJoin = (e) => {
         if (!name.trim()) return;
-
         ws.send(JSON.stringify({
             type: "join",
             username: name.trim()
         }));
+        setName("")
+        e.target.value = ""
     };
 
     ws.onmessage = (event) => {
@@ -30,18 +28,20 @@ export function Join() {
         }
     };
 
-    return jsx("div", null,
-        jsx("h1", null, "Welcome to our Bomberman game!"),
+    return jsx("div", { className: "container login-container" },
+        jsx("h1", null, "Welcome to our  Bomberman!"),
 
         jsx("input", {
             type: "text",
             placeholder: "Enter your name",
             value: name,
-            oninput: (e) => setName(e.target.value)
+            oninput: (e) => setName(e.target.value),
+            onkeypress: (e) => e.key === 'Enter' && handleJoin()    
+
         }),
 
-        jsx("button", { onclick: handleJoin, }, "Join"),
+        jsx("button", { onclick: handleJoin }, "Join Game"),
 
-        error && jsx("p", { style: "color:red" }, error)
+        error !== "" && jsx("p", { className: "error" }, error)
     );
 }
