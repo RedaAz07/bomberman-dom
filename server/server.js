@@ -24,13 +24,13 @@ const server = createServer(async (req, res) => {
         let reqPath;
 
         if (req.url === "/") {
-            reqPath = "app/index.html";
+            reqPath = "index.html";
         } else {
             const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
             if (cleanUrl.startsWith("framework/")) {
                 reqPath = cleanUrl;
             } else {
-                reqPath = "app/" + cleanUrl;
+                reqPath = cleanUrl;
             }
         }
 
@@ -47,6 +47,7 @@ const server = createServer(async (req, res) => {
         res.end(content);
 
     } catch (err) {
+        
         res.writeHead(404, { "Content-Type": "text/plain" });
         res.end("404 Not Found");
     }

@@ -1,6 +1,6 @@
-import { jsx, useState } from "../../framework/main.js";
-import { ws } from "../src/js/ws.js";
-import { navigate } from "../../framework/main.js";
+import { jsx, useState } from "../framework/main.js";
+import { ws } from "../assets/js/ws.js";
+import { navigate } from "../framework/main.js";
 
 export function Join() {
     const [name, setName] = useState("");
@@ -14,7 +14,7 @@ export function Join() {
             username: name.trim()
         }));
         setName("")
-        e.target.value = ""
+        // e.target.value = ""
     };
 
     ws.onmessage = (event) => {

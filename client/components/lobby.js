@@ -1,137 +1,142 @@
-import { jsx } from "../../framework/main.js";
-
-//this function will generate a random map based on rows and cols
-function generateMap(rows, cols) {
-  const map = [];
-  let count = 0;
-  let addStone = true;
-  for (let r = 0; r < rows; r++) {
-    const row = [];
-    for (let c = 0; c < cols; c++) {
-      if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
-        // Border walls
-        if (
-          (r === 0 && c === 0) ||
-          (r === 0 && c === cols - 1) ||
-          (r === rows - 1 && c === 0) ||
-          (r === rows - 1 && c === cols - 1)
-        ) {
-          row.push(3); // Corners
-        } else {
-          row.push(1); // Walls
-        }
-      } else {
-        // Randomly place walls and bramls
-        if (c > 2 && c < cols - 3 && r > 1 && r < rows - 2) {
-          if (r % 2 === 0 && c % 2 !== 0) {
-            addStone = true;
-          }
-          if (addStone) {
-            row.push(4);
-            addStone = false;
-            continue;
-          }
-        }
-
-        const rand = Math.random();
-        if (
-          rand < 0.4 &&
-          count < 50 &&
-          !(r <= 2 && c <= 3) &&
-          !(r >= rows - 3 && c >= cols - 4) &&
-          !(r <= 2 && c >= cols - 4) &&
-          !(r >= rows - 3 && c <= 3)
-        ) {
-          row.push(2); // Braml
-          count++;
-        } else {
-          row.push(0); // Grass
-        }
-      }
-    }
-    map.push(row);
-  }
-  return map;
-}
-
-const tileClass = {
-  0: "tile tile-grass",
-  1: "tile tile-wall-vertical",
-  2: "tile tile-braml",
-  3: "tile tile-wall-corner",
-  4: "tile tile-stone",
-};
-
-const TILE_SIZE = 50;
-const ROWS = 15;
-const COLS = 15;
-console.log(generateMap(ROWS, COLS));
-// Example function to determine style based on position and tile type
-function getTileStyle(
-  row,
-  col,
-  tile,
-  x = col * TILE_SIZE,
-  y = row * TILE_SIZE
-) {
-  if (row > 0 && row < ROWS - 1 && tile === 1) {
-    if (col < COLS - 1) {
-      return {
-        backgroundImage: `url("/client/assets/images/tile5.jpg")`,
-        backgroundSize: "contain",
-        transform: `translate3d(${x}px, ${y}px, 0)`,
-      };
-    }
-    return { transform: `translate3d(${x}px, ${y}px, 0) rotate(90deg)` };
-  }
-  if (row > 0 && row < ROWS && col < COLS - 1 && tile == 1) {
-    if (row === ROWS - 1) {
-      return {
-        transform: `translate3d(${x}px, ${y}px, 0) rotate(180deg)`,
-      };
-    }
-
-    return {
-      backgroundImage: `url("/client/assets/images/tile5.jpg")`,
-      backgroundSize: "contain",
-      transform: `translate3d(${x}px, ${y}px, 0)`,
-    };
-  }
-
-  if (row === 0 && col === COLS - 1 && tile == 3) {
-    return {
-      transform: `translate3d(${x}px, ${y}px, 0) rotate(90deg)`,
-    };
-  }
-  if (row === ROWS - 1 && col === 0 && tile == 3) {
-    return {
-      transform: `translate3d(${x}px, ${y}px, 0) rotate(-90deg)`,
-    };
-  }
-  if (row === ROWS - 1 && col === COLS - 1 && tile == 3) {
-    return {
-      transform: `translate3d(${x}px, ${y}px, 0) rotate(180deg)`,
-    };
-  }
-  return { transform: `translate3d(${x}px, ${y}px, 0)` };
-}
+import {
+  jsx,
+  useState,
+  useEffect,
+  useRef,
+  navigate,
+} from "../framework/main.js";
+import { ws } from "../assets/js/ws.js";
 
 export function Lobby() {
-  const mapData = generateMap(ROWS, COLS);
+  const [sec, setsec] = useState(20);
+
+  useEffect(() => {
+    let count = 1;
+    const time = setInterval(() => {
+      console.log("0000");
+
+      setsec(sec - count);
+      if (count == 20) {
+        navigate("/map");
+        clearInterval(time);
+      }
+      count += 1;
+    }, 1000);
+  }, []);
+  const [msg, setMsg] = useState("");
+  const [players, setPlayers] = useState([]);
+  const [chat, setChat] = useState([]);
+  if (ws.username == undefined) {
+    navigate("/");
+  }
+
+  const sendMsg = (e) => {
+    if (!msg.trim()) return;
+
+    ws.send(
+      JSON.stringify({
+        username: ws.username,
+        type: "message",
+        msg,
+      })
+    );
+    setMsg("");
+    e.target.value = "";
+  };
+
+  useEffect(() => {
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "player-list") {
+        setPlayers(data.players);
+      }
+
+      if (data.type === "message") {
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
+      }
+    };
+  }, [players, chat]);
+
+  // if ( players.length === 0) {
+  //   navigate("/");
+  // }
+
   return jsx(
     "div",
-    { className: "map-container" },
-    ...mapData.map((row, rowIndex) =>
+    { className: "container" },
+    jsx("h1", null, "game start in  " + sec + " seconds"),
+
+    jsx("h1", null, "Game Lobby"),
+
+    jsx(
+      "div",
+      { className: "lobby-container" },
+      // PLAYERS SECTION
       jsx(
         "div",
-        { className: "map-row" },
-        ...row.map((cell, colIndex) =>
-          jsx("div", {
-            className: tileClass[cell],
-            style: getTileStyle(rowIndex, colIndex, cell),
-            "data-row": rowIndex,
-            "data-col": colIndex,
-          })
+        { className: "players-section" },
+        jsx("h3", null, "Players"),
+        jsx(
+          "ul",
+          { className: "players-list" },
+          ...(Array.isArray(players)
+            ? players.map((p) => jsx("li", { className: "player-item" }, p))
+            : [])
+        ),
+        jsx(
+          "div",
+          { className: "player-count" },
+          `Total: ${Array.isArray(players) ? players.length : 0} players`
+        )
+      ),
+
+      // CHAT SECTION
+      jsx(
+        "div",
+        { className: "chat-section" },
+        jsx("h3", null, "Game Chat"),
+
+        jsx(
+          "div",
+          { className: "chat-messages" },
+          ...chat.map((c) =>
+            jsx(
+              "div",
+              { className: "chat-message" },
+              jsx("span", { className: "username" }, c.username),
+              jsx("span", null, c.msg)
+            )
+          )
+        ),
+
+        jsx(
+          "div",
+          { className: "chat-input-container" },
+          jsx("input", {
+            type: "text",
+            value: msg ? msg : "",
+            placeholder: "Type a message...",
+            oninput: (e) => setMsg(e.target.value),
+            onkeypress: (e) => {
+              if (e.key === "Enter") {
+                sendMsg(e);
+              }
+            },
+          }),
+          jsx(
+            "button",
+            {
+              onclick: (e) => {
+                sendMsg(e);
+                e.target.previousSibling.value = "";
+              },
+            },
+            "Send"
+          )
         )
       )
     )
