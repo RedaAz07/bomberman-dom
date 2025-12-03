@@ -5,6 +5,9 @@ export function Lobby() {
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
+  if (ws.username == undefined) {
+    navigate("/");
+  }
 
   const sendMsg = (e) => {
     if (!msg.trim()) return;
@@ -26,14 +29,15 @@ export function Lobby() {
       if (data.type === "player-list") {
         setPlayers(data.players);
       }
+
       if (data.type === "message") {
-        setChat((prev) => [
-          ...prev,
-          { username: data.username, msg: data.msg },
+        setChat(prev => [...prev,
+        { username: data.username, msg: data.msg }
         ]);
       }
     };
-  }, [players, msg]);
+  }, [players, chat]);
+
 
   // if ( players.length === 0) {
   //   navigate("/");

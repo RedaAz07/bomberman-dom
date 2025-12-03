@@ -59,7 +59,6 @@ wss.on("connection", (socket) => {
 
     socket.on("message", (msg) => {
         const data = JSON.parse(msg);
-        console.log(data, "hadi hiya dataaaaaaaaaaaaaa +++++++++++");
 
         if (data.type === "join") {
             const username = data.username.trim();
@@ -88,8 +87,6 @@ wss.on("connection", (socket) => {
             return;
         }
         if (data.type === "message") {
-            console.log(data, "hawaa");
-
             broadcast({
                 type: "message",
                 username: socket.username,
