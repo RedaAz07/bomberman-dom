@@ -4,134 +4,138 @@ import path from "node:path";
 import { WebSocketServer } from "ws";
 
 const PORT = 3000;
-const players = [];
-let timer = null;
-let timeLeft = null;
-
 const base = path.join(process.cwd(), "..", "client");
 
+/* ---------------- MIME TYPES ---------------- */
 const mime = {
     ".html": "text/html",
     ".css": "text/css",
     ".js": "application/javascript",
     ".png": "image/png",
     ".jpg": "image/jpeg",
-    ".webp": "image/webp",
-    ".json": "application/json"
+    ".webp": "image/webp"
 };
 
-const server = createServer(async (req, res) => {
+/* ---------------- ROOM SYSTEM ---------------- */
+let rooms = []; // { id, players[], timer, timeLeft }
 
-    try {
-        let reqPath;
-
-        if (req.url === "/") {
-            reqPath = "index.html";
-        } else {
-            const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
-            if (cleanUrl.startsWith("framework/")) {
-                reqPath = cleanUrl;
-            } else {
-                reqPath = cleanUrl;
-            }
-        }
-
-        const fullPath = path.join(base, reqPath);
-
-
-        const ext = path.extname(fullPath);
-        const type = mime[ext] || "text/plain";
-        const isBinary = type.startsWith("image/");
-
-        const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
-
-        res.writeHead(200, { "Content-Type": type });
-        res.end(content);
-
-    } catch (err) {
-
-        res.writeHead(404, { "Content-Type": "text/plain" });
-        res.end("404 Not Found");
-    }
-});
-
-const wss = new WebSocketServer({ server });
-
-function broadcast(data) {
-    const msg = JSON.stringify(data);
-    for (const client of wss.clients) {
-        if (client.readyState === 1) client.send(msg);
-    }
+function createRoom() {
+    const room = {
+        id: rooms.length + 1,
+        players: [],
+        timer: null,
+        timeLeft: null,
+    };
+    rooms.push(room);
+    return room;
 }
 
-function startGameTimer() {
-    if (timer !== null) return;
+function findOrCreateRoom() {
+    let room = rooms.find((r) => r.players.length < 4);
+    if (!room) room = createRoom();
+    return room;
+}
 
-    // 2 or 3 players = 20s
-    // 4 players = 10s
-    if (players.length === 2 || players.length === 3) timeLeft = 20;
-    if (players.length === 4) timeLeft = 10;
-    if (players.length <= 1) return;
+/* ---------------- TIMER LOGIC ---------------- */
+function startTimer(room) {
+    if (room.timer !== null) return;
 
-    timer = setInterval(() => {
-        timeLeft--;
+    room.timeLeft = 10;
 
-        broadcast({
+    room.timer = setInterval(() => {
+        room.timeLeft--;
+
+        broadcastRoom(room, {
             type: "counter",
-            timeLeft
+            timeLeft: room.timeLeft
         });
 
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            timer = null;
-            broadcast({ type: "start-game" });
+        if (room.timeLeft <= 0) {
+            clearInterval(room.timer);
+            room.timer = null;
+            room.timeLeft = null;
+
+            broadcastRoom(room, {
+                type: "start-game"
+            });
         }
     }, 1000);
 }
 
-function stopGameTimer() {
-    if (timer !== null) clearInterval(timer);
-    timer = null;
-    timeLeft = null;
-
-    broadcast({
-        type: "counter",
-        timeLeft: null
-    });
+function stopTimer(room) {
+    if (room.timer) clearInterval(room.timer);
+    room.timer = null;
+    room.timeLeft = null;
 }
 
+function broadcastRoom(room, obj) {
+    const msg = JSON.stringify(obj);
+
+    for (const client of wss.clients) {
+        if (client.readyState === 1 && client.roomId === room.id) {
+            client.send(msg);
+        }
+    }
+}
+
+/* ---------------- HTTP FILE SERVER ---------------- */
+const server = createServer(async (req, res) => {
+    try {
+        let file = req.url === "/" ? "index.html" : req.url.slice(1);
+        const fullPath = path.join(base, file);
+
+        const ext = path.extname(fullPath);
+        const type = mime[ext] || "text/plain";
+
+        const content = await fs.readFile(fullPath, "utf8");
+
+        res.writeHead(200, { "Content-Type": type });
+        res.end(content);
+    } catch {
+        res.writeHead(404);
+        res.end("Not Found");
+    }
+});
+
+/* ---------------- WEBSOCKET SERVER ---------------- */
+const wss = new WebSocketServer({ server });
+
 wss.on("connection", (socket) => {
+
     socket.on("message", (msg) => {
         const data = JSON.parse(msg);
 
+        /* -------- JOIN ROOM -------- */
         if (data.type === "join") {
-            const username = data.username.trim();
+            let room = findOrCreateRoom();
 
-            if (players.includes(username)) {
-                return socket.send(JSON.stringify({
-                    type: "join-error",
-                    msg: "Username already exists"
-                }));
-            }
+            socket.username = data.username;
+            socket.roomId = room.id;
 
-            players.push(username);
-            socket.username = username;
+            room.players.push(socket.username);
 
             socket.send(JSON.stringify({
                 type: "join-success",
-                username
+                username: socket.username,
+                roomId: room.id
             }));
 
-            broadcast({
+            broadcastRoom(room, {
                 type: "player-list",
-                players: [...players]
+                players: [...room.players]
             });
 
-            startGameTimer();
+            if (room.players.length === 4) {
+                startTimer(room);
+            }
         }
 
+        /* -------- CHAT MESSAGE -------- */
         if (data.type === "message") {
-            broadcast({
+            const room = rooms.find((r) => r.id === socket.roomId);
+            if (!room) return;
+
+            broadcastRoom(room, {
                 type: "message",
                 username: socket.username,
                 msg: data.msg
@@ -139,21 +143,23 @@ wss.on("connection", (socket) => {
         }
     });
 
+    /* -------- PLAYER DISCONNECT -------- */
     socket.on("close", () => {
-        if (socket.username) {
-            const index = players.indexOf(socket.username);
-            if (index !== -1) players.splice(index, 1);
+        const room = rooms.find((r) => r.id === socket.roomId);
+        if (!room) return;
 
-            broadcast({
-                type: "player-list",
-                players: [...players]
-            });
+        const i = room.players.indexOf(socket.username);
+        if (i !== -1) room.players.splice(i, 1);
 
-            if (players.length <= 1) stopGameTimer();
-        }
+        if (room.players.length <= 1) stopTimer(room);
+
+        broadcastRoom(room, {
+            type: "player-list",
+            players: [...room.players]
+        });
     });
 });
 
 server.listen(PORT, () =>
-    console.log(`Server running at http://localhost:${PORT}`)
+    console.log(`Server running on http://localhost:${PORT}`)
 );

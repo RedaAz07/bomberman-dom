@@ -1,4 +1,9 @@
-import { jsx, useState, useEffect, navigate } from "../framework/main.js";
+import {
+  jsx,
+  useState,
+  useEffect,
+  navigate,
+} from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
 
 export function Lobby() {
@@ -7,20 +12,22 @@ export function Lobby() {
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
 
-  if (!ws.username) {
-    navigate("/");
-  }
+  if (!ws.username) navigate("/");
 
   useEffect(() => {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
+      if (data.type === "join-success") {
+        ws.roomId = data.roomId;
+      }
 
       if (data.type === "player-list") {
         setPlayers(data.players);
       }
 
       if (data.type === "message") {
-        setChat((prev) => [...prev, { username: data.username, msg: data.msg }]);
+        setChat((c) => [...c, data]);
       }
 
       if (data.type === "counter") {
@@ -33,76 +40,73 @@ export function Lobby() {
     };
   }, []);
 
-  const sendMsg = (e) => {
+  function sendMsg(e) {
     if (!msg.trim()) return;
 
     ws.send(JSON.stringify({
       type: "message",
       msg,
+      username: ws.username
     }));
 
     setMsg("");
     e.target.value = "";
-  };
+  }
 
   return jsx(
     "div",
-    { className: "container" },
+    { class: "container" },
 
-    sec !== null && jsx("h1", null, `Game starts in ${sec} seconds`),
+    sec !== null &&
+    jsx("h1", null, "Game starts in " + sec + "s"),
 
-    jsx("h1", null, "Game Lobby"),
+    jsx("h1", null, "Lobby — Room " + ws.roomId),
 
     jsx(
       "div",
-      { className: "lobby-container" },
+      { class: "lobby-container" },
 
       jsx(
         "div",
-        { className: "players-section" },
+        { class: "players-section" },
         jsx("h3", null, "Players"),
+
         jsx(
           "ul",
-          { className: "players-list" },
-          ...players.map((p) =>
-            jsx("li", { className: "player-item" }, p)
-          )
+          null,
+          ...players.map((p) => jsx("li", null, p))
         ),
-        jsx("div", { className: "player-count" }, `Total: ${players.length} players`)
+
+        jsx("div", null, "Total: " + players.length)
       ),
 
       jsx(
         "div",
-        { className: "chat-section" },
-        jsx("h3", null, "Game Chat"),
+        { class: "chat-section" },
+
+        jsx("h3", null, "Chat"),
 
         jsx(
           "div",
-          { className: "chat-messages" },
+          { class: "chat-messages" },
           ...chat.map((c) =>
             jsx(
               "div",
-              { className: "chat-message" },
-              jsx("span", { className: "username" }, c.username + ": "),
+              null,
+              jsx("b", null, c.username + ": "),
               jsx("span", null, c.msg)
             )
           )
         ),
 
-        jsx(
-          "div",
-          { className: "chat-input-container" },
-          jsx("input", {
-            type: "text",
-            value: msg,
-            placeholder: "Type a message...",
-            oninput: (e) => setMsg(e.target.value),
-            onkeypress: (e) => {
-              if (e.key === "Enter") sendMsg(e);
-            },
-          }),
-          jsx("button", { onclick: sendMsg }, "Send")
-        )
+        jsx("input", {
+          value: msg,
+          placeholder: "message...",
+          oninput: (e) => setMsg(e.target.value),
+          onkeypress: (e) => {
+            if (e.key === "Enter") sendMsg(e);
+          },
+        })
       )
     )
   );
