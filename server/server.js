@@ -1,55 +1,122 @@
-import http from 'http';
-import url from 'url';
-import fs from 'fs';
-
-
-import { WebSocketServer } from 'ws';
-
-
-
+import { createServer } from "node:http";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { WebSocketServer } from "ws";
 const PORT = 3000;
+const players = [];
 
-export const rooms = []
+const base = path.join(process.cwd(), "..", "client");
+console.log(process.cwd());
 
-const server = http.createServer((req, res) => {
+const mime = {
+    ".html": "text/html",
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".webp": "image/webp",
+    ".json": "application/json"
+};
 
+const server = createServer(async (req, res) => {
 
+    try {
+        let reqPath;
 
-    res.writeHead(200, {"content-type": "text/html"})
-
-
-fs.readFileSync()
-fs.readFile()
-    res.end("WebSocket Server is running")
-})/* 
-
-
-
-const ws = new WebSocketServer({ server, path: '/ws' })
-
-
-ws.on('connection', (stream) => {
-    stream.on('message', (message) => {
-        try {
-
-            const data = JSON.parse(message.toString())
-
-            switch (data.type) {
-                case "join":
-
-                    break
-
+        if (req.url === "/") {
+            reqPath = "index.html";
+        } else {
+            const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
+            if (cleanUrl.startsWith("framework/")) {
+                reqPath = cleanUrl;
+            } else {
+                reqPath = cleanUrl;
             }
-        } catch (error) {
-            console.log("error");
         }
-    })
 
-    stream.on('close', () => {
-    })
-})
-*/
+        const fullPath = path.join(base, reqPath);
 
-server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+
+        const ext = path.extname(fullPath);
+        const type = mime[ext] || "text/plain";
+        const isBinary = type.startsWith("image/");
+
+        const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
+
+        res.writeHead(200, { "Content-Type": type });
+        res.end(content);
+
+    } catch (err) {
+        
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("404 Not Found");
+    }
 });
+
+
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (socket) => {
+
+    socket.on("message", (msg) => {
+        const data = JSON.parse(msg);
+
+        if (data.type === "join") {
+            const username = data.username.trim();
+
+            if (players.includes(username)) {
+                socket.send(JSON.stringify({
+                    type: "join-error",
+                    msg: "Username already exist"
+                }));
+                return;
+            }
+
+            players.push(username);
+            socket.username = username;
+
+            socket.send(JSON.stringify({
+                type: "join-success",
+                username,
+            }));
+
+            broadcast({
+                type: "player-list",
+                players: [...players]
+            });
+
+            return;
+        }
+        if (data.type === "message") {
+            broadcast({
+                type: "message",
+                username: socket.username,
+                msg: data.msg
+            });
+        }
+    });
+
+    socket.on("close", () => {
+        if (socket.username) {
+            const index = players.indexOf(socket.username);
+            if (index !== -1) {
+                players.splice(index, 1);
+            }
+
+            broadcast({
+                type: "player-list",
+                players: [...players]
+            });
+        }
+    });
+});
+
+function broadcast(obj) {
+    for (const client of wss.clients) {
+        if (client.readyState === 1) {
+            client.send(JSON.stringify(obj));
+        }
+    }
+}
+
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
