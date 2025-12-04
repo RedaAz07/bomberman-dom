@@ -166,12 +166,4 @@ wss.on("connection", (socket) => {
     });
 });
 
-function broadcast(obj) {
-    for (const client of wss.clients) {
-        if (client.readyState === 1) {
-            client.send(JSON.stringify(obj));
-        }
-    }
-}
-
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

@@ -24,7 +24,7 @@ export function addRoute(path, callback) {
   routes[path] = callback;
   if (timedout) clearTimeout(timedout);
   timedout = setTimeout(() => {
-    startTransition();
+    startTransition(false);
   }, 0);
 }
 
@@ -40,8 +40,8 @@ export function addRoute(path, callback) {
  * // window.location.hash = '#/about' -> renders About component
  */
 
-export function handleRouteChange() {
-  const route = window.location.hash.slice(1) || "/";
+export function handleRouteChange(path) {
+  const route = path || window.location.hash.slice(1) || "/";
   clearStates();
   if (routes[route]) {
     render(routes[route]);

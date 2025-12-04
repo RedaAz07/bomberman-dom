@@ -14,8 +14,11 @@ import { handleRouteChange } from "./core/route.js";
  * // Typically called internally, but can be called manually
  * startTransition();
  */
-export function startTransition() {
-  handleRouteChange();
-  window.addEventListener("hashchange", handleRouteChange);
+export function startTransition(isHashchangeListening) {
+  if (isHashchangeListening) {
+    handleRouteChange();
+    window.addEventListener("hashchange", handleRouteChange);
+  }
+  handleRouteChange("/");
 }
 export { useState, useEffect, useRef, jsx, addRoute, Store, navigate };

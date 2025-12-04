@@ -121,17 +121,33 @@ export function map() {
   return jsx(
     "div",
     { className: "map-container" },
+    jsx("div", { className: "player" }),
     ...mapData.map((row, rowIndex) =>
       jsx(
         "div",
         { className: "map-row" },
         ...row.map((cell, colIndex) =>
-          jsx("div", {
-            className: tileClass[cell],
-            style: getTileStyle(rowIndex, colIndex, cell),
-            "data-row": rowIndex,
-            "data-col": colIndex,
-          })
+          cell === 2
+            ? [
+                jsx("div", {
+                  className: "tile tile-grass",
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+                jsx("div", {
+                  className: tileClass[cell],
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+              ]
+            : jsx("div", {
+                className: tileClass[cell],
+                style: getTileStyle(rowIndex, colIndex, cell),
+                "data-row": rowIndex,
+                "data-col": colIndex,
+              })
         )
       )
     )
