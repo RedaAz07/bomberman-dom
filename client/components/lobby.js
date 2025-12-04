@@ -6,16 +6,18 @@ export function Lobby() {
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
+  const [roomId, setRoomId] = useState(null);
 
-  if (!ws.username) {
-    navigate("/");
-  }
+  if (!ws.username) navigate("/");
 
   useEffect(() => {
-    console.log("------------------------");
-
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
+      if (data.type === "join-success") {
+        ws.roomId = data.roomId;
+        setRoomId(data.roomId);
+      }
 
       if (data.type === "player-list") {
         setPlayers(data.players);
@@ -52,8 +54,7 @@ export function Lobby() {
     { className: "container" },
 
     sec !== null && jsx("h1", null, `Game starts in ${sec} seconds`),
-
-    jsx("h1", null, "Game Lobby"),
+    roomId && jsx("h1", null, "Game Lobby " + roomId),
 
     jsx(
       "div",
@@ -77,7 +78,6 @@ export function Lobby() {
         "div",
         { className: "chat-section" },
         jsx("h3", null, "Game Chat"),
-
         jsx(
           "div",
           { className: "chat-messages" },
@@ -85,7 +85,7 @@ export function Lobby() {
             jsx(
               "div",
               { className: "chat-message" },
-              jsx("span", { className: "username" }, c.username + " :"),
+              jsx("span", { className: "username" }, c.username + ": "),
               jsx("span", null, c.msg)
             )
           )
