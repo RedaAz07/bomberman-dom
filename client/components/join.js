@@ -21,7 +21,7 @@ export function Join() {
         const data = JSON.parse(event.data);
 
         if (data.type === "join-success") {
-            navigate("#/lobby");
+            navigate("/lobby");
         }
 
         if (data.type === "join-error") {
