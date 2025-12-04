@@ -65,21 +65,30 @@ function broadcast(data) {
 }
 
 function startGameTimer() {
-    if (timer !== null) return;
+    console.log(players.length);
 
-    // 2 or 3 players = 20s
-    // 4 players = 10s
-    if (players.length === 2 || players.length === 3) timeLeft = 20;
-    if (players.length === 4) timeLeft = 10;
+    console.log("ssssssssssss", players.length);
+
     if (players.length <= 1) return;
-
+    if (players.length == 2) timeLeft = 30;
+    if (players.length == 4) timeLeft = 10;
+    console.log("time", timeLeft);
+    if (timer) {
+        clearInterval(timer)
+    }
     timer = setInterval(() => {
         timeLeft--;
-
-        broadcast({
-            type: "counter",
-            timeLeft
-        });
+        if (timeLeft <= 10) {
+            broadcast({
+                type: "counter",
+                timeLeft: timeLeft,
+            });
+        } else {
+            broadcast({
+                type: "counter",
+                timeLeft: timeLeft - 10,
+            });
+        }
 
         if (timeLeft <= 0) {
             clearInterval(timer);

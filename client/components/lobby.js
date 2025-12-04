@@ -12,6 +12,8 @@ export function Lobby() {
   }
 
   useEffect(() => {
+    console.log("------------------------");
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
@@ -31,7 +33,7 @@ export function Lobby() {
         navigate("/map");
       }
     };
-  }, []);
+  }, [players, chat]);
 
   const sendMsg = (e) => {
     if (!msg.trim()) return;
@@ -101,7 +103,7 @@ export function Lobby() {
               if (e.key === "Enter") sendMsg(e);
             },
           }),
-          jsx("button", { onclick: sendMsg }, "Send")
+          jsx("button", { onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) } }, "Send")
         )
       )
     )
