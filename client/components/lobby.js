@@ -33,7 +33,7 @@ export function Lobby() {
         navigate("/map");
       }
     };
-  }, [players, chat]);
+  }, []);
 
   const sendMsg = (e) => {
     if (!msg.trim()) return;
@@ -85,7 +85,7 @@ export function Lobby() {
             jsx(
               "div",
               { className: "chat-message" },
-              jsx("span", { className: "username" }, c.username + ": "),
+              jsx("span", { className: "username" }, c.username + " :"),
               jsx("span", null, c.msg)
             )
           )

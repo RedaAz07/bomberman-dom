@@ -374,10 +374,6 @@ p[style*="color: red"],
   margin-right: 8px;
 }
 
-.chat-message .username::after {
-  content: ":";
-  margin-right: 5px;
-}
 
 @keyframes messageIn {
   from {
