@@ -9,9 +9,12 @@ const PORT = 3000;
 let rooms = [];
 
 function createRoom() {
+    const map = generateMap(15, 15)
+
     const room = {
         id: rooms.length + 1,
         players: [],
+        map,
         timer: null,
         timeLeft: null,
         disponible: true
@@ -67,7 +70,7 @@ function startGameTimer(room) {
             clearInterval(room.timer);
             room.timer = null;
             room.disponible = false
-            broadcastRoom(room, { type: "start-game", map });
+            broadcastRoom(room, { type: "start-game", map: room.map });
         }
     }, 1000);
 }
@@ -136,7 +139,6 @@ const server = createServer(async (req, res) => {
 });
 
 /* -------------------- WEBSOCKET SERVER -------------------- */
-const map = generateMap(15, 15)
 
 const wss = new WebSocketServer({ server });
 
