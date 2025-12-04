@@ -1,50 +1,19 @@
-import {
-  jsx,
-  useState,
-  useEffect,
-  useRef,
-  navigate,
-} from "../framework/main.js";
+import { jsx, useState, useEffect, navigate } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
 
 export function Lobby() {
-  const [sec, setsec] = useState(20);
-
-  useEffect(() => {
-    let count = 1;
-    const time = setInterval(() => {
-      console.log("0000");
-
-      setsec(sec - count);
-      if (count == 20) {
-        navigate("/map");
-        clearInterval(time);
-      }
-      count += 1;
-    }, 1000);
-  }, []);
+  const [sec, setSec] = useState(null);
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
-  if (ws.username == undefined) {
+
+  if (!ws.username) {
     navigate("/");
   }
 
-  const sendMsg = (e) => {
-    if (!msg.trim()) return;
-
-    ws.send(
-      JSON.stringify({
-        username: ws.username,
-        type: "message",
-        msg,
-      })
-    );
-    setMsg("");
-    e.target.value = "";
-  };
-
   useEffect(() => {
+    console.log("------------------------");
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
@@ -53,29 +22,43 @@ export function Lobby() {
       }
 
       if (data.type === "message") {
-        setChat((prev) => [
-          ...prev,
-          { username: data.username, msg: data.msg },
-        ]);
+        setChat((prev) => [...prev, { username: data.username, msg: data.msg }]);
+      }
+
+      if (data.type === "counter") {
+        setSec(data.timeLeft);
+      }
+
+      if (data.type === "start-game") {
+        navigate("/map");
       }
     };
   }, [players, chat]);
 
-  // if ( players.length === 0) {
-  //   navigate("/");
-  // }
+  const sendMsg = (e) => {
+    if (!msg.trim()) return;
+
+    ws.send(JSON.stringify({
+      type: "message",
+      msg,
+    }));
+
+    setMsg("");
+    e.target.value = "";
+  };
 
   return jsx(
     "div",
     { className: "container" },
-    jsx("h1", null, "game start in  " + sec + " seconds"),
+
+    sec !== null && jsx("h1", null, `Game starts in ${sec} seconds`),
 
     jsx("h1", null, "Game Lobby"),
 
     jsx(
       "div",
       { className: "lobby-container" },
-      // PLAYERS SECTION
+
       jsx(
         "div",
         { className: "players-section" },
@@ -83,18 +66,13 @@ export function Lobby() {
         jsx(
           "ul",
           { className: "players-list" },
-          ...(Array.isArray(players)
-            ? players.map((p) => jsx("li", { className: "player-item" }, p))
-            : [])
+          ...players.map((p) =>
+            jsx("li", { className: "player-item" }, p)
+          )
         ),
-        jsx(
-          "div",
-          { className: "player-count" },
-          `Total: ${Array.isArray(players) ? players.length : 0} players`
-        )
+        jsx("div", { className: "player-count" }, `Total: ${players.length} players`)
       ),
 
-      // CHAT SECTION
       jsx(
         "div",
         { className: "chat-section" },
@@ -107,7 +85,7 @@ export function Lobby() {
             jsx(
               "div",
               { className: "chat-message" },
-              jsx("span", { className: "username" }, c.username),
+              jsx("span", { className: "username" }, c.username + ": "),
               jsx("span", null, c.msg)
             )
           )
@@ -118,25 +96,14 @@ export function Lobby() {
           { className: "chat-input-container" },
           jsx("input", {
             type: "text",
-            value: msg ? msg : "",
+            value: msg,
             placeholder: "Type a message...",
             oninput: (e) => setMsg(e.target.value),
             onkeypress: (e) => {
-              if (e.key === "Enter") {
-                sendMsg(e);
-              }
+              if (e.key === "Enter") sendMsg(e);
             },
           }),
-          jsx(
-            "button",
-            {
-              onclick: (e) => {
-                sendMsg(e);
-                e.target.previousSibling.value = "";
-              },
-            },
-            "Send"
-          )
+          jsx("button", { onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) } }, "Send")
         )
       )
     )

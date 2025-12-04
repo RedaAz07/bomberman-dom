@@ -2,11 +2,13 @@ import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
+
 const PORT = 3000;
 const players = [];
+let timer = null;
+let timeLeft = null;
 
 const base = path.join(process.cwd(), "..", "client");
-console.log(process.cwd());
 
 const mime = {
   ".html": "text/html",
@@ -58,72 +60,118 @@ const server = createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server });
 
+function broadcast(data) {
+    const msg = JSON.stringify(data);
+    for (const client of wss.clients) {
+        if (client.readyState === 1) client.send(msg);
+    }
+}
+
+function startGameTimer() {
+    console.log(players.length);
+
+    console.log("ssssssssssss", players.length);
+
+    if (players.length <= 1) return;
+    if (players.length == 2) timeLeft = 30;
+    if (players.length == 4) timeLeft = 10;
+    console.log("time", timeLeft);
+    if (timer) {
+        clearInterval(timer)
+    }
+    timer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 10) {
+            broadcast({
+                type: "counter",
+                timeLeft: timeLeft,
+            });
+        } else {
+            broadcast({
+                type: "counter",
+                timeLeft: timeLeft - 10,
+            });
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            timer = null;
+            broadcast({ type: "start-game" });
+        }
+    }, 1000);
+}
+
+function stopGameTimer() {
+    if (timer !== null) clearInterval(timer);
+    timer = null;
+    timeLeft = null;
+
+    broadcast({
+        type: "counter",
+        timeLeft: null
+    });
+}
+
 wss.on("connection", (socket) => {
-  socket.on("message", (msg) => {
-    const data = JSON.parse(msg);
+    socket.on("message", (msg) => {
+        const data = JSON.parse(msg);
 
     if (data.type === "join") {
       const username = data.username.trim();
 
-      if (players.includes(username)) {
-        socket.send(
-          JSON.stringify({
-            type: "join-error",
-            msg: "Username already exist",
-          })
-        );
-        return;
-      }
+            if (players.includes(username)) {
+                return socket.send(JSON.stringify({
+                    type: "join-error",
+                    msg: "Username already exists"
+                }));
+            }
 
       players.push(username);
       socket.username = username;
 
-      socket.send(
-        JSON.stringify({
-          type: "join-success",
-          username,
-        })
-      );
+            socket.send(JSON.stringify({
+                type: "join-success",
+                username
+            }));
 
       broadcast({
         type: "player-list",
         players: [...players],
       });
 
-      return;
-    }
-    if (data.type === "message") {
-      broadcast({
-        type: "message",
-        username: socket.username,
-        msg: data.msg,
-      });
-    }
-  });
+            startGameTimer();
+        }
 
-  socket.on("close", () => {
-    if (socket.username) {
-      const index = players.indexOf(socket.username);
-      if (index !== -1) {
-        players.splice(index, 1);
-      }
+        if (data.type === "message") {
+            broadcast({
+                type: "message",
+                username: socket.username,
+                msg: data.msg
+            });
+        }
+    });
 
-      broadcast({
-        type: "player-list",
-        players: [...players],
-      });
-    }
-  });
+    socket.on("close", () => {
+        if (socket.username) {
+            const index = players.indexOf(socket.username);
+            if (index !== -1) players.splice(index, 1);
+
+            broadcast({
+                type: "player-list",
+                players: [...players]
+            });
+
+            if (players.length <= 1) stopGameTimer();
+        }
+    });
 });
 
 function broadcast(obj) {
-  for (const client of wss.clients) {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(obj));
+    for (const client of wss.clients) {
+        if (client.readyState === 1) {
+            client.send(JSON.stringify(obj));
+        }
     }
-  }
 }
 
-server.listen(PORT, () =>
-  console.log(`Server running on http://localhost:${PORT}`)
-);
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
