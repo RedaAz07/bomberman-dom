@@ -26,7 +26,6 @@ export function addRoute(path, callback) {
   timedout = setTimeout(() => {
     startTransition();
   }, 0);
-
 }
 
 /**
@@ -51,7 +50,12 @@ export function handleRouteChange() {
   }
 }
 
-
 export const navigate = (path) => {
-  window.location.hash = path;
+  history.pushState(null, null, `${path}`);
+
+  if (routes[path]) {
+    render(routes[path]);
+  } else {
+    render(notFound);
+  }
 };
