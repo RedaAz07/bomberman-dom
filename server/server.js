@@ -5,148 +5,183 @@ import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
 
 const PORT = 3000;
-const players = [];
-let timer = null;
-let timeLeft = null;
+
+let rooms = [];
+
+function createRoom() {
+    const room = {
+        id: rooms.length + 1,
+        players: [],
+        timer: null,
+        timeLeft: null,
+        disponible: true
+    };
+    rooms.push(room);
+    return room;
+}
+
+
+function findOrCreateRoom() {
+    let room = rooms.find((r) => r.disponible && r.players.length < 4);
+    if (!room) room = createRoom();
+    return room;
+}
+
+
+function broadcastRoom(room, obj) {
+    const msg = JSON.stringify(obj);
+
+    for (const p of room.players) {
+        if (p.socket.readyState === 1) {
+            p.socket.send(msg);
+        }
+    }
+}
+
+function startGameTimer(room) {
+    if (room.players.length <= 1) return;
+
+    if (room.players.length === 2) room.timeLeft = 5;
+    if (room.players.length === 4) room.timeLeft = 10;
+
+    if (room.timer) clearInterval(room.timer);
+
+    room.timer = setInterval(() => {
+        room.timeLeft--;
+        // if (room.timeLeft <= 10) {
+        //     broadcastRoom(room, {
+        //         type: "counter",
+        //         timeLeft: room.timeLeft,
+        //     })
+        // } else {
+        //     broadcastRoom(room, {
+        //         type: "counter",
+        //         timeLeft: room.timeLeft - 10,
+        //     });
+        // }
+        broadcastRoom(room, {
+            type: "counter",
+            timeLeft: room.timeLeft,
+        });
+        if (room.timeLeft <= 0) {
+            clearInterval(room.timer);
+            room.timer = null;
+            room.disponible = false
+            broadcastRoom(room, { type: "start-game", map });
+        }
+    }, 1000);
+}
+
+function stopTimer(room) {
+    if (room.timer) clearInterval(room.timer);
+    room.timer = null;
+    room.timeLeft = null;
+
+    broadcastRoom(room, {
+        type: "counter",
+        timeLeft: null
+    });
+}
+
+/* -------------------- FILE SERVER -------------------- */
 
 const base = path.join(process.cwd(), "..", "client");
 
 const mime = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "application/javascript",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".webp": "image/webp",
-  ".json": "application/json",
+    ".html": "text/html",
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".webp": "image/webp",
+    ".json": "application/json",
 };
 
 const Routes = ["/", "/map", "/lobby"];
 
 const server = createServer(async (req, res) => {
-  try {
-    let reqPath;
+    try {
+        let reqPath;
 
-    if (req.url === "/") {
-      reqPath = "index.html";
-    } else {
-      const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
-      if (cleanUrl.startsWith("framework/")) {
-        reqPath = cleanUrl;
-      } else {
-        reqPath = cleanUrl;
-      }
+        if (req.url === "/") {
+            reqPath = "index.html";
+        } else {
+            const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
+            if (cleanUrl.startsWith("framework/")) {
+                reqPath = cleanUrl;
+            } else {
+                reqPath = cleanUrl;
+            }
+        }
+
+        const fullPath = path.join(base, reqPath);
+
+        const ext = path.extname(fullPath);
+        const type = mime[ext] || "text/plain";
+        const isBinary = type.startsWith("image/");
+
+        const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
+
+        res.writeHead(200, { "Content-Type": type });
+        res.end(content);
+    } catch (err) {
+        if (Routes.includes(req.url)) {
+            res.writeHead(302, { Location: "/" });
+            res.end();
+        } else {
+            res.writeHead(404, { "Content-Type": "text/plain" });
+            res.end("404 Not Found");
+        }
     }
-
-    const fullPath = path.join(base, reqPath);
-
-    const ext = path.extname(fullPath);
-    const type = mime[ext] || "text/plain";
-    const isBinary = type.startsWith("image/");
-
-    const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
-
-    res.writeHead(200, { "Content-Type": type });
-    res.end(content);
-  } catch (err) {
-    if (Routes.includes(req.url)) {
-      res.writeHead(302, { Location: "/" });
-      res.end();
-    } else {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end("404 Not Found");
-    }
-  }
 });
+
+/* -------------------- WEBSOCKET SERVER -------------------- */
+const map = generateMap(15, 15)
 
 const wss = new WebSocketServer({ server });
 
-function broadcast(data) {
-    const msg = JSON.stringify(data);
-    for (const client of wss.clients) {
-        if (client.readyState === 1) client.send(msg);
-    }
-}
-
-function startGameTimer() {
-    console.log(players.length);
-
-    console.log("ssssssssssss", players.length);
-
-    if (players.length <= 1) return;
-    if (players.length == 2) timeLeft = 30;
-    if (players.length == 4) timeLeft = 10;
-    console.log("time", timeLeft);
-    if (timer) {
-        clearInterval(timer)
-    }
-    timer = setInterval(() => {
-        timeLeft--;
-        if (timeLeft <= 10) {
-            broadcast({
-                type: "counter",
-                timeLeft: timeLeft,
-            });
-        } else {
-            broadcast({
-                type: "counter",
-                timeLeft: timeLeft - 10,
-            });
-        }
-
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            timer = null;
-
-            broadcast({ type: "start-game", map: map });
-        }
-    }, 1000);
-}
-
-function stopGameTimer() {
-    if (timer !== null) clearInterval(timer);
-    timer = null;
-    timeLeft = null;
-
-    broadcast({
-        type: "counter",
-        timeLeft: null
-    });
-}
-const map = generateMap(15, 15)
-
 wss.on("connection", (socket) => {
-    socket.on("message", (msg) => {
-        const data = JSON.parse(msg);
 
-    if (data.type === "join") {
-      const username = data.username.trim();
+    socket.on("message", (raw) => {
+        const data = JSON.parse(raw);
 
-            if (players.includes(username)) {
+        /* ---------------- JOIN ---------------- */
+        if (data.type === "join") {
+            const username = data.username.trim();
+            let room = findOrCreateRoom();
+
+            if (room.players.some(p => p.username === username)) {
                 return socket.send(JSON.stringify({
                     type: "join-error",
-                    msg: "Username already exists"
+                    msg: "Username already in use"
                 }));
             }
 
-      players.push(username);
-      socket.username = username;
+            room.players.push({ username, socket });
+            socket.roomId = room.id;
+            socket.username = username;
 
             socket.send(JSON.stringify({
                 type: "join-success",
-                username
+                roomId: room.id
             }));
 
-      broadcast({
-        type: "player-list",
-        players: [...players],
-      });
+            broadcastRoom(room, {
+                type: "player-list",
+                players: room.players.map(p => p.username),
+            });
 
-            startGameTimer();
+
+            startGameTimer(room);
+
         }
 
+        /* ---------------- CHAT ---------------- */
         if (data.type === "message") {
-            broadcast({
+            const room = rooms.find((r) => r.id === socket.roomId);
+            if (!room) return;
+
+            broadcastRoom(room, {
                 type: "message",
                 username: socket.username,
                 msg: data.msg
@@ -154,19 +189,22 @@ wss.on("connection", (socket) => {
         }
     });
 
+    /* ---------------- DISCONNECT ---------------- */
     socket.on("close", () => {
-        if (socket.username) {
-            const index = players.indexOf(socket.username);
-            if (index !== -1) players.splice(index, 1);
+        const room = rooms.find((r) => r.id === socket.roomId);
+        if (!room) return;
 
-            broadcast({
-                type: "player-list",
-                players: [...players]
-            });
+        room.players = room.players.filter((p) => p.socket !== socket);
 
-            if (players.length <= 1) stopGameTimer();
-        }
+        if (room.players.length <= 1) stopTimer(room);
+
+        broadcastRoom(room, {
+            type: "player-list",
+            players: room.players.map(p => p.username)
+        });
     });
 });
 
-server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+server.listen(PORT, () =>
+    console.log(`Server running at http://localhost:${PORT}`)
+);
