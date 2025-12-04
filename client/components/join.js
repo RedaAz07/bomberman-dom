@@ -14,12 +14,11 @@ export function Join() {
             username: name.trim()
         }));
         setName("")
-        // e.target.value = ""
+        e.target.value = ""
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-
         if (data.type === "join-success") {
             navigate("/lobby");
         }
@@ -37,11 +36,11 @@ export function Join() {
             placeholder: "Enter your name",
             value: name,
             oninput: (e) => setName(e.target.value),
-            onkeypress: (e) => e.key === 'Enter' && handleJoin()
+            onkeypress: (e) => e.key === 'Enter' && handleJoin(e)
 
         }),
 
-        jsx("button", { onclick: handleJoin }, "Join Game"),
+        jsx("button", { onclick: (e) => { e.target.previousSibling.value = ""; handleJoin(e) } }, "Join Game"),
 
         error !== "" && jsx("p", { className: "error" }, error)
     );
