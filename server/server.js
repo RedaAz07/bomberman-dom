@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
+import { generateMap } from "./generateMap.js";
 
 const PORT = 3000;
 const players = [];
@@ -93,7 +94,8 @@ function startGameTimer() {
         if (timeLeft <= 0) {
             clearInterval(timer);
             timer = null;
-            broadcast({ type: "start-game" });
+
+            broadcast({ type: "start-game", map: map });
         }
     }, 1000);
 }
@@ -108,6 +110,7 @@ function stopGameTimer() {
         timeLeft: null
     });
 }
+const map = generateMap(15, 15)
 
 wss.on("connection", (socket) => {
     socket.on("message", (msg) => {

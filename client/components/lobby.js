@@ -1,5 +1,6 @@
-import { jsx, useState, useEffect, navigate } from "../framework/main.js";
+import { jsx, useState, useEffect, navigate, Store } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
+export const store = Store({ map: [] });
 
 export function Lobby() {
   const [sec, setSec] = useState(null);
@@ -30,6 +31,7 @@ export function Lobby() {
       }
 
       if (data.type === "start-game") {
+        store.set({ map: data.map });
         navigate("/map");
       }
     };
