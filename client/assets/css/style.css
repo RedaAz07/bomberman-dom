@@ -449,7 +449,25 @@ p[style*="color: red"],
   width: 50px;
   height: 50px;
   background: black;
-  background-size: cover;
-  top: 0;
-  left: 0;
+  top: 0px;
+  left: 0px;
+  z-index: 10;
+}
+.game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bom {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: rgb(255, 0, 0);
+  top: 0px;
+  left: 0px;
+  z-index: 10;
 }

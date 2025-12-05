@@ -1,6 +1,12 @@
-import { jsx, useState, useEffect, navigate, Store } from "../framework/main.js";
+import {
+  jsx,
+  useState,
+  useEffect,
+  navigate,
+  Store,
+} from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
-export const store = Store({ map: [] });
+export const store = Store({ map: [], collisionMap: [], bom: false });
 
 export function Lobby() {
   const [sec, setSec] = useState(null);
@@ -25,7 +31,10 @@ export function Lobby() {
       }
 
       if (data.type === "message") {
-        setChat((prev) => [...prev, { username: data.username, msg: data.msg }]);
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
       }
 
       if (data.type === "counter") {
@@ -33,7 +42,9 @@ export function Lobby() {
       }
 
       if (data.type === "start-game") {
-        store.set({ map: data.map });
+        console.log("dtat",data);
+        
+        store.set({ map: data.map, collisionMap: data.collisionMap });
         navigate("/map");
       }
     };
@@ -42,10 +53,12 @@ export function Lobby() {
   const sendMsg = (e) => {
     if (!msg.trim()) return;
 
-    ws.send(JSON.stringify({
-      type: "message",
-      msg,
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        msg,
+      })
+    );
 
     setMsg("");
     e.target.value = "";
@@ -69,11 +82,13 @@ export function Lobby() {
         jsx(
           "ul",
           { className: "players-list" },
-          ...players.map((p) =>
-            jsx("li", { className: "player-item" }, p)
-          )
+          ...players.map((p) => jsx("li", { className: "player-item" }, p))
         ),
-        jsx("div", { className: "player-count" }, `Total: ${players.length} players`)
+        jsx(
+          "div",
+          { className: "player-count" },
+          `Total: ${players.length} players`
+        )
       ),
 
       jsx(
@@ -105,7 +120,16 @@ export function Lobby() {
               if (e.key === "Enter") sendMsg(e);
             },
           }),
-          jsx("button", { onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) } }, "Send")
+          jsx(
+            "button",
+            {
+              onclick: (e) => {
+                e.target.previousSibling.value = "";
+                sendMsg(e);
+              },
+            },
+            "Send"
+          )
         )
       )
     )

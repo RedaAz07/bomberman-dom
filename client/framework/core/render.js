@@ -1,4 +1,4 @@
-import { pindingEffects, clearhooks } from "./hooks.js";
+import { pindingEffects, clearhooks, clearStates } from "./hooks.js";
 import { updateElement } from "./diff.js";
 
 let root = null;
@@ -36,13 +36,16 @@ function getRoot() {
  */
 export function render(App) {
   getRoot();
-  if (App) rootElements = App;
-  
-  
-  clearhooks();
+  if (App) {
+    clearStates();
+    rootElements = App;
+  }
+
   const newVDOM = rootElements(); // new virtual DOM
-  
+
   updateElement(root, newVDOM, oldVDOM); // diff & patch
   oldVDOM = newVDOM; // save for next render
+
   pindingEffects.forEach((fn) => fn());
+  clearhooks();
 }

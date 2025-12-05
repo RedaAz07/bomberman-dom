@@ -10,11 +10,14 @@ const tileClass = {
   4: "tile tile-stone",
 };
 
-export function map() {
+export function map(playerRef, bomRef) {
   const mapData = store.get().map;
+  const bom = store.get().bom;
   return jsx(
     "div",
     { className: "map-container" },
+    jsx("div", { className: "player", ref: playerRef }),
+    bom && jsx("div", { className: "bom", ref: bomRef }),
     ...mapData.map((row, rowIndex) =>
       jsx(
         "div",

@@ -1,10 +1,12 @@
 //this function will generate a random map based on rows and cols
-export  function generateMap(rows, cols) {
+export function generateMap(rows, cols) {
   const map = [];
+  const collisionMap = [];
   let count = 0;
   let addStone = true;
   for (let r = 0; r < rows; r++) {
     const row = [];
+    const collisionRow = [];
     for (let c = 0; c < cols; c++) {
       if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
         // Border walls
@@ -15,8 +17,10 @@ export  function generateMap(rows, cols) {
           (r === rows - 1 && c === cols - 1)
         ) {
           row.push(3); // Corners
+          collisionRow.push(1);
         } else {
           row.push(1); // Walls
+          collisionRow.push(1);
         }
       } else {
         // Randomly place walls and bramls
@@ -26,6 +30,7 @@ export  function generateMap(rows, cols) {
           }
           if (addStone) {
             row.push(4);
+            collisionRow.push(1);
             addStone = false;
             continue;
           }
@@ -41,13 +46,16 @@ export  function generateMap(rows, cols) {
           !(r >= rows - 3 && c <= 3)
         ) {
           row.push(2); // Braml
+          collisionRow.push(1);
           count++;
         } else {
           row.push(0); // Grass
+          collisionRow.push(0);
         }
       }
     }
     map.push(row);
+    collisionMap.push(collisionRow);
   }
-  return map;
+  return { map, collisionMap };
 }

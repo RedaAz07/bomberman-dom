@@ -164,6 +164,8 @@ function updateElementProps(el, newNode, oldNode) {
       if (value) {
         el.addEventListener(key.slice(2).toLowerCase(), value);
       }
+    } else if (key === "ref" && typeof value === "object" && value !== null) {
+      value.current = el;
     } else if (key === "className") {
       el.className = value;
     } else if (key === "id") {

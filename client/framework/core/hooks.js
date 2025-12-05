@@ -82,7 +82,7 @@ export function useEffect(callback, dependencies) {
   }
   const oldDependencies = effects[effectIndex];
   const hasChanged = areDepsChanged(oldDependencies, dependencies);
-
+  
   if (hasChanged) {
     pindingEffects.push(callback);
   }
