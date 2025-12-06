@@ -36,7 +36,7 @@ function getRoot() {
  */
 export function render(App) {
   getRoot();
-  if (App) {
+  if (App) {    
     clearStates();
     rootElements = App;
   }

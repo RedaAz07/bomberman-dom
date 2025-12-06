@@ -69,7 +69,7 @@ function startGameTimer(room) {
       clearInterval(room.timer);
       room.timer = null;
       room.disponible = false;
-      broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap });
+      broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
     }
   }, 1000);
 }

@@ -21,6 +21,13 @@ export function clearhooks() {
   pindingEffects = [];
 }
 
+
+
+
+
+
+
+
 export function clearStates() {
   states = [];
   refs = [];
@@ -50,6 +57,8 @@ export function useState(initialValue) {
     if (typeof newValue === "function") {
       states[currentIndex] = newValue(states[currentIndex]);
     } else {
+      console.log(states, currentIndex);
+
       states[currentIndex] = newValue;
     }
     render();
@@ -82,8 +91,10 @@ export function useEffect(callback, dependencies) {
   }
   const oldDependencies = effects[effectIndex];
   const hasChanged = areDepsChanged(oldDependencies, dependencies);
-  
+
   if (hasChanged) {
+    console.log("effects", effects);
+
     pindingEffects.push(callback);
   }
 

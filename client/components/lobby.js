@@ -6,7 +6,7 @@ import {
   Store,
 } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
-export const store = Store({ map: [], collisionMap: [], bom: false });
+export const store = Store({ map: [], collisionMap: [], bom: false, players: [] });
 
 export function Lobby() {
   const [sec, setSec] = useState(null);
@@ -27,6 +27,8 @@ export function Lobby() {
       }
 
       if (data.type === "player-list") {
+        console.log(data.players);
+
         setPlayers(data.players);
       }
 
@@ -42,9 +44,9 @@ export function Lobby() {
       }
 
       if (data.type === "start-game") {
-        console.log("dtat",data);
-        
-        store.set({ map: data.map, collisionMap: data.collisionMap });
+        console.log("dtat", data);
+
+        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players });
         navigate("/map");
       }
     };

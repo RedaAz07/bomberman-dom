@@ -173,8 +173,11 @@ function updateElementProps(el, newNode, oldNode) {
     } else if (key === "autoFocus" && value === true) {
       setTimeout(() => {
         el.focus();
-        const len = el.value?.length || 0;
-        el.setSelectionRange(len, len);
+        if (el.DOCUMENT_TYPE_NODE === "input") {
+
+          const len = el.value?.length || 0;
+          el.setSelectionRange(len, len);
+        }
       }, 0);
     } else if (key === "style" && typeof value === "object") {
       Object.assign(el.style, value);

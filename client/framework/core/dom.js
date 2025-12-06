@@ -22,7 +22,7 @@ export function createElement(node) {
 
   for (const [key, value] of Object.entries(node.props)) {
     if (key === "ref" && typeof value === "object" && value !== null) {
-      
+
       value.current = el;
     } else if (key.startsWith("on") && typeof value === "function") {
       el.addEventListener(key.slice(2).toLowerCase(), value);
@@ -34,8 +34,11 @@ export function createElement(node) {
       // Delay focus until node is mounted
       setTimeout(() => {
         el.focus();
-        const len = el.value?.length || 0;
-        el.setSelectionRange(len, len);
+        if (el.DOCUMENT_TYPE_NODE === "input") {
+
+          const len = el.value?.length || 0;
+          el.setSelectionRange(len, len);
+        }
       }, 0);
     } else if (key === "checked") {
       el.checked = value;
@@ -45,7 +48,7 @@ export function createElement(node) {
       el.setAttribute(key, value);
     }
   }
-  
+
   node.children.forEach((child) => {
     el.appendChild(createElement(child));
   });
