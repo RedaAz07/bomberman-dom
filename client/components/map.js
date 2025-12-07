@@ -1,6 +1,4 @@
 import { jsx } from "../framework/main.js";
-import { ws } from "../assets/js/ws.js";
-
 
 import { store } from "./lobby.js"
 const tileClass = {

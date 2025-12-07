@@ -163,11 +163,11 @@ wss.on("connection", (socket) => {
             socket.roomId = room.id;
             socket.username = username;
 
-            socket.send(JSON.stringify({
+            broadcastRoom(room, {
                 type: "join-success",
-                roomId: room.id
-            }));
-
+                roomId: socket.roomId
+            });
+            
             broadcastRoom(room, {
                 type: "player-list",
                 players: room.players.map(p => p.username),

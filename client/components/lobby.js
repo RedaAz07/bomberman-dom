@@ -15,8 +15,9 @@ export function Lobby() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
+      console.log(data,"zddddddddd");
       if (data.type === "join-success") {
-        ws.roomId = data.roomId;
+
         setRoomId(data.roomId);
       }
 
