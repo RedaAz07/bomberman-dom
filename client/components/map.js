@@ -10,9 +10,8 @@ const tileClass = {
   4: "tile tile-stone",
 };
 
-
-export function map(playerRef, bomRef) {
-  const mapRef = useRef(null)
+export function map(playersRef, bomRef) {
+  const mapRef = useRef(null);
   const [playerPosition, setPlayerPosition] = useState({
     0: { top: "0px", left: "0px" },
     1: { top: "0px", left: "0px" },
@@ -38,10 +37,10 @@ export function map(playerRef, bomRef) {
         console.log("Map dimensions found:", width, height);
 
         setPlayerPosition({
-          0: { top: "50px", left: "50px" },
-          1: { top: "50px", left: `${width - 50}px` },
-          2: { top: `${height - 50}px`, left: `${width - 50}px` },
-          3: { top: `${height - 50}px`, left: "50px" },
+          0: { top: "37px", left: "50px" },
+          1: { top: "37px", left: `${width - 100}px` },
+          2: { top: `${height - 114}px`, left: `${width - 100}px` },
+          3: { top: `${height - 114}px`, left: "50px" },
         });
       }
     });
@@ -52,7 +51,6 @@ export function map(playerRef, bomRef) {
     // NOTE: Your custom useEffect does not support cleanup functions yet!
     // In React, you would return () => observer.disconnect();
     // You should implement cleanup in your framework later to avoid memory leaks.
-
   }, []); // Run once to attach the observer
 
   const mapData = store.get().map;
@@ -64,7 +62,12 @@ export function map(playerRef, bomRef) {
     "div",
     { className: "map-container", ref: mapRef },
     ...players.map((p, i) => {
-      return jsx("div", { className: `player player${i}`, style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left }, key: `${p.username}`, ref: playerRef })
+      return jsx("div", {
+        className: `player player${i}`,
+        style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
+        key: `${p.username}`,
+        ref: playersRef[i],
+      });
     }),
     bom && jsx("div", { className: "bom", ref: bomRef }),
     ...mapData.map((row, rowIndex) =>
@@ -74,25 +77,25 @@ export function map(playerRef, bomRef) {
         ...row.map((cell, colIndex) =>
           cell === 2
             ? [
-              jsx("div", {
-                className: "tile tile-grass",
-                style: getTileStyle(rowIndex, colIndex, cell),
-                "data-row": rowIndex,
-                "data-col": colIndex,
-              }),
-              jsx("div", {
+                jsx("div", {
+                  className: "tile tile-grass",
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+                jsx("div", {
+                  className: tileClass[cell],
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+              ]
+            : jsx("div", {
                 className: tileClass[cell],
                 style: getTileStyle(rowIndex, colIndex, cell),
                 "data-row": rowIndex,
                 "data-col": colIndex,
-              }),
-            ]
-            : jsx("div", {
-              className: tileClass[cell],
-              style: getTileStyle(rowIndex, colIndex, cell),
-              "data-row": rowIndex,
-              "data-col": colIndex,
-            })
+              })
         )
       )
     )

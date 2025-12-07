@@ -451,7 +451,7 @@ p[style*="color: red"],
 .player {
   position: absolute;
   width: 50px;
-  height: 50px;
+  height: 64px;
   z-index: 100;
   background-position: -5px -13px;
   background-repeat: no-repeat;
@@ -462,7 +462,7 @@ p[style*="color: red"],
   background-image: url("../images/player1.png");
 }
 .player1{
-  background-image: url("../images/player0.png");
+  background-image: url("../images/player1.png");
 }
 
 .game-container {

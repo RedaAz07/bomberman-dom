@@ -17,10 +17,10 @@ export function generateMap(rows, cols) {
           (r === rows - 1 && c === cols - 1)
         ) {
           row.push(3); // Corners
-          collisionRow.push(1);
+          collisionRow.push(0);
         } else {
           row.push(1); // Walls
-          collisionRow.push(1);
+          collisionRow.push(0);
         }
       } else {
         // Randomly place walls and bramls
@@ -39,7 +39,7 @@ export function generateMap(rows, cols) {
         const rand = Math.random();
         if (
           rand < 0.4 &&
-          count < 50 &&
+          count < 10 &&
           !(r <= 2 && c <= 3) &&
           !(r >= rows - 3 && c >= cols - 4) &&
           !(r <= 2 && c >= cols - 4) &&
