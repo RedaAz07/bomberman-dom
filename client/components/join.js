@@ -7,7 +7,7 @@ export function Join() {
     const [error, setError] = useState("");
 
     const handleJoin = (e) => {
-        if (!name.trim()) return;
+        if (!name.trim() || name.trim() >= 10) return;
         ws.username = name
         ws.send(JSON.stringify({
             type: "join",
@@ -29,19 +29,30 @@ export function Join() {
     };
 
     return jsx("div", { className: "container login-container" },
-        jsx("h1", null, "Welcome to our Bomberman game"),
+        jsx("h1", null, "💣 BOMBERMAN 💣"),
+        jsx("div", { className: "subtitle" }, "ARENA BATTLE"),
+        jsx("p", { className: "welcome-text" }, "Enter the arena and become the ultimate bomber!"),
 
         jsx("input", {
             type: "text",
-            placeholder: "Enter your name",
+            placeholder: "Enter your warrior name...",
             value: name,
             oninput: (e) => setName(e.target.value),
-            onkeypress: (e) => e.key === 'Enter' && handleJoin(e)
-
+            onkeypress: (e) => e.key === 'Enter' && handleJoin(e),
+            maxlength: "15"
         }),
 
-        jsx("button", { onclick: (e) => { e.target.previousSibling.value = ""; handleJoin(e) } }, "Join Game"),
+        jsx("button", {
+            onclick: (e) => { e.target.previousSibling.value = ""; handleJoin(e) },
+            className: "join-button"
+        }, "🎮 JOIN GAME 🎮"),
 
-        error !== "" && jsx("p", { className: "error" }, error)
+        error !== "" && jsx("p", { className: "error" }, error),
+
+        jsx("div", { className: "game-info" },
+            jsx("div", { className: "info-item" }, "🔥 Place Bombs"),
+            jsx("div", { className: "info-item" }, "💥 Destroy Walls"),
+            jsx("div", { className: "info-item" }, "🏆 Last One Standing")
+        )
     );
 }
