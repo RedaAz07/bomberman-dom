@@ -17,10 +17,10 @@ export function generateMap(rows, cols) {
           (r === rows - 1 && c === cols - 1)
         ) {
           row.push(3); // Corners
-          collisionRow.push(0);
+          collisionRow.push(1);
         } else {
           row.push(1); // Walls
-          collisionRow.push(0);
+          collisionRow.push(1);
         }
       } else {
         // Randomly place walls and bramls
