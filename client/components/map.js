@@ -64,7 +64,7 @@ export function map(playerRef, bomRef) {
     "div",
     { className: "map-container", ref: mapRef },
     ...players.map((p, i) => {
-      return jsx("div", { className: "player", style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left }, key: `${p.username}`, ref: playerRef })
+      return jsx("div", { className: `player player${i}`, style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left }, key: `${p.username}`, ref: playerRef })
     }),
     bom && jsx("div", { className: "bom", ref: bomRef }),
     ...mapData.map((row, rowIndex) =>
