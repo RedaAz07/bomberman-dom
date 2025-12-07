@@ -43,7 +43,7 @@ function broadcastRoom(room, obj) {
 function startGameTimer(room) {
   if (room.players.length <= 1) return;
 
-  if (room.players.length === 2) room.timeLeft = 200;
+  if (room.players.length === 2) room.timeLeft = 5;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
@@ -142,6 +142,7 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (socket) => {
+
   socket.on("message", (raw) => {
     const data = JSON.parse(raw);
 
@@ -163,16 +164,14 @@ wss.on("connection", (socket) => {
       socket.roomId = room.id;
       socket.username = username;
 
-      socket.send(
-        JSON.stringify({
-          type: "join-success",
-          roomId: room.id,
-        })
-      );
+      broadcastRoom(room, {
+        type: "join-success",
+      })
 
       broadcastRoom(room, {
         type: "player-list",
         players: room.players.map((p) => p.username),
+        roomId: room.id,
       });
 
       startGameTimer(room);
@@ -203,6 +202,7 @@ wss.on("connection", (socket) => {
     broadcastRoom(room, {
       type: "player-list",
       players: room.players.map((p) => p.username),
+      roomId: room.id,
     });
   });
 });

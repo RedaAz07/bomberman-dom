@@ -14,6 +14,7 @@ export function Lobby() {
   const [chat, setChat] = useState([]);
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
+  // console.log(ws, "websoket+++++++++++++++++++++");
 
   if (!ws.username) navigate("/");
 
@@ -21,15 +22,10 @@ export function Lobby() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type === "join-success") {
-        ws.roomId = data.roomId;
-        setRoomId(data.roomId);
-      }
-
       if (data.type === "player-list") {
-        console.log(data.players);
-
         setPlayers(data.players);
+        setRoomId(data.roomId)
+        ws.roomId = data.roomId
       }
 
       if (data.type === "message") {
@@ -44,8 +40,6 @@ export function Lobby() {
       }
 
       if (data.type === "start-game") {
-        console.log("dtat", data);
-
         store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players });
         navigate("/map");
       }
@@ -68,12 +62,12 @@ export function Lobby() {
 
   return jsx("div", { className: "container lobby-wrapper" },
 
+    roomId !== null && jsx("div", { className: "room-id" }, "Welcome to game lobby (Room: " + roomId + ")"),
     sec !== null && jsx("div", { className: "countdown-timer" },
       jsx("span", { className: "timer-label" }, "Game Starting In"),
       jsx("span", { className: "timer-value" }, sec),
       jsx("span", { className: "timer-label" }, "seconds")
     ),
-    roomId !== null && jsx("div", { className: "room-id" }, "Room: " + roomId),
 
     jsx("div", { className: "lobby-container" },
       jsx("div", { className: "players-section" },
@@ -133,8 +127,6 @@ export function Lobby() {
           )
         )
       ),
-
-
     )
   );
 }
