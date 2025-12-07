@@ -17,7 +17,7 @@ export function game() {
   const bomRef = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
-  const mapData = store.get().map;
+  const mapData = store.get().collisionMap;
 
   function handleKeyDown(e) {
     if (FRAMES[e.key]) {
@@ -49,9 +49,9 @@ export function game() {
       const absY = baseY + newY;
 
       const hitBox = {
-        x: 5,
+        x: 0,
         y: 14,
-        w: 42,
+        w: 48,
         h: 48
       };
 
