@@ -1,27 +1,41 @@
-import { Store, useEffect, useRef } from "../framework/main.js";
+import { Store, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
 
 export function game() {
   let frameIndex = 0;
-  const frameWidth = 64;
-  const frameHeight = 64;
   const FRAMES = {
     ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
+  const [bombs, setBombs] = useState([])
   const eventKey = useRef(null);
-  const bomRef = useRef(null);
+  const bombRef = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
   const mapData = store.get().collisionMap;
 
+  console.log("ferfmlkrmfmrefmrekfmlkermfkl", bombs);
   function handleKeyDown(e) {
+    console.log(e.key);
+
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
+    }
+    if (e.key === " ") {
+
+      const pl = playersRef[0].current.getBoundingClientRect()
+      const b = {
+        top: pl.top,
+        left: pl.left,
+      }
+      setBombs(prev => {
+        prev.push(b)
+        return prev
+      })
     }
   }
 
@@ -35,6 +49,22 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
+
+    // bomb 
+    let bomb = false;
+    let bombe = null;
+    let colb = 0;
+    const colsbomb = 5;
+    const rowsbomb = 1;
+    let bombFrameIndex = 0;
+    let animationTimerbomb = 0;
+    let animationSpeedbomb = 300
+    const frameWidthbomb = 50;
+    const frameHeightbomb = 50;
+    const bombFrames = { bomb: { row: 0, col: [0, 1, 2, 3, 4] } }
+    // player
+    const frameWidth = 64;
+    const frameHeight = 64;
     const playerEl = playersRef[0].current;
     let lastTime = 0;
     let animationTimer = 0;
@@ -87,6 +117,34 @@ export function game() {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
 
+      if (bombRef.current) {
+        const maxFrames = bombFrames.bomb.col.length; // = 5
+        if (bombFrameIndex >= maxFrames) {
+          bombFrameIndex = 0;
+          bombRef.current.remove();
+          bombRef.current = null;
+          bomb = false;
+        } else {
+
+          const col = bombFrameIndex;
+
+
+          const frameX = col * frameWidthbomb;
+
+          bombRef.current.style.backgroundPosition = `-${frameX}px`;
+        }
+        animationTimerbomb += delta;
+        if (animationTimerbomb > animationSpeedbomb) {
+          animationTimerbomb = 0;
+          bombFrameIndex++
+
+        }
+      }
+
+
+
+
+
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
@@ -96,10 +154,9 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX + 5}px -${
-          frameY + 13
-        }px`;
-        
+        playerEl.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13
+          }px`;
+
         // movement with deltaTime
         const moveDist = speed * delta;
 
@@ -175,6 +232,7 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    map(playersRef, bomRef)
+    map(playersRef),
+    ...bombs.map((b) => jsx("div", { className: "bomb", style: { top: `${b.top}px`, left: `${b.left}px` }, ref: bombRef }))
   );
 }

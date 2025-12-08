@@ -24,7 +24,6 @@ let speed = 0.1;
 let currentKey = null;
 
 document.addEventListener("keydown", (e) => {
-  console.log("fjerfgrefkerkferfre");
   
     if (FRAMES[e.key]) {
         currentKey = e.key;

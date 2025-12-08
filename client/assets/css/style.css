@@ -14,7 +14,7 @@ body {
   align-items: center;
   min-height: 100vh;
   margin: 0;
-  padding: 20px;
+
 }
 
 .game-container {
@@ -706,16 +706,30 @@ p[style*="color: red"],
   width: 50px;
   height: 64px;
   z-index: 100;
-  background-position: -5px -13px;
+  background-position: -5px -15px;
   background-repeat: no-repeat;
   image-rendering: pixelated;
 }
 
-.player0{
+.bomb {
+  z-index: 10000000000000000000;
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-image: url("../images/bomb10.png");
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  background-size: 250px 250px;
+  background-position: 0px;
+  border: 2px solid rgb(81, 255, 0);
+}
+
+.player0 {
   background-image: url("../images/player1.png");
 }
-.player1{
-  background-image: url("../images/player1.png");
+
+.player1 {
+  background-image: url("../images/player0.png");
 }
 
 .game-container {
