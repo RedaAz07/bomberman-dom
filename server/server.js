@@ -41,9 +41,9 @@ function broadcastRoom(room, obj) {
 }
 
 function startGameTimer(room) {
-  if (room.players.length <= 1) return;
+  if (room.players.length <= 1) room.timeLeft = 1;
 
-  if (room.players.length === 2) room.timeLeft = 5;
+  if (room.players.length === 2) room.timeLeft = 1;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);

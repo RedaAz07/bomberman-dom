@@ -4,84 +4,156 @@ import { store } from "./lobby.js";
 import { map } from "./map.js";
 
 export function game() {
-  const eventKey = {};
-  const bomRef = useRef(null);
-  const playerRef = useRef(null);
-
-  const collisionMap = store.get().collisionMap;
-
-  function handleKeyDown(e) {
-    if (FRAMES[e.key]) eventKey[e.key] = true;
-  }
-
-  function handleKeyUp(e) {
-    eventKey[e.key] = false;
-  }
-
-  // SPRITE DATA
-  const sheetWidth = 832;
-  const sheetHeight = 3456;
-  const cols = 13;
-  const rows = 54;
-
-  const frameWidth = sheetWidth / cols;
-  const frameHeight = sheetHeight / rows;
-
+  let frameIndex = 0;
+  const frameWidth = 64;
+  const frameHeight = 64;
   const FRAMES = {
     ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
+  const eventKey = useRef(null);
+  const bomRef = useRef(null);
+  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+  const mapData = store.get().collisionMap;
+
+  function handleKeyDown(e) {
+    if (FRAMES[e.key]) {
+      eventKey.current = e.key;
+    }
+  }
+
+  function handleKeyUp(e) {
+    if (eventKey.current === e.key) {
+      eventKey.current = null;
+      frameIndex = 0;
+    }
+  }
+
+  // SPRITE DATA
 
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    let posX = 0;
-    let posY = 0;
-
-    let frameIndex = 0;
+    const playerEl = playersRef[0].current;
     let lastTime = 0;
     let animationTimer = 0;
-    const animationSpeed = 80;
-    const speed = 0.1;
+    let animationSpeed = 80;
+    let posX = 0;
+    let posY = 0;
+    let speed = 0.1;
+    function checkCollision(newX, newY) {
+      const baseX = playerEl.offsetLeft;
+      const baseY = playerEl.offsetTop;
+      const absX = baseX + newX;
+      const absY = baseY + newY;
 
-    let currentKey = null;
+      const hitBox = {
+        x: 0,
+        y: 14,
+        w: 48,
+        h: 48
+      };
 
-    function update(time) {
-      const delta = time - lastTime;
-      lastTime = time;
+      const points = {
+        tl: { x: absX + hitBox.x, y: absY + hitBox.y },
+        tr: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y },
+        bl: { x: absX + hitBox.x, y: absY + hitBox.y + hitBox.h },
+        br: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y + hitBox.h },
+      };
 
-      // detect movement key
-      const keys = Object.keys(eventKey).filter(k => eventKey[k]);
-      if (keys.length > 0) currentKey = keys[0];
-      else {
-        currentKey = null;
-        frameIndex = 0;
+      const collisions = {};
+      let hasCollision = false;
+
+      for (const key in points) {
+        const point = points[key];
+        const tileX = Math.floor(point.x / 50);
+        const tileY = Math.floor(point.y / 50);
+
+        let isBlocked = false;
+        if (!mapData || !mapData[tileY] || mapData[tileY][tileX] === undefined) {
+          isBlocked = true;
+        } else if (mapData[tileY][tileX] !== 0) {
+          isBlocked = true;
+        }
+
+        collisions[key] = isBlocked;
+        if (isBlocked) hasCollision = true;
       }
+      return { hasCollision, collisions };
+    }
 
-      if (currentKey && FRAMES[currentKey]) {
-        const anim = FRAMES[currentKey];
+    function loop(timeStamp) {
+      const delta = timeStamp - lastTime;
+      lastTime = timeStamp;
 
-        // choose frame
+      if (eventKey.current) {
+        const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
         const row = anim.row;
 
+        // frame position
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        player.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        playerEl.style.backgroundPosition = `-${frameX + 5}px -${
+          frameY + 13
+        }px`;
+        
+        // movement with deltaTime
+        const moveDist = speed * delta;
 
-        // movement
-        if (currentKey === "ArrowRight") posX += speed * delta;
-        if (currentKey === "ArrowLeft") posX -= speed * delta;
-        if (currentKey === "ArrowUp") posY -= speed * delta;
-        if (currentKey === "ArrowDown") posY += speed * delta;
+        if (eventKey.current === "ArrowRight") {
+          const { hasCollision, collisions } = checkCollision(posX + moveDist, posY);
+          if (!hasCollision) {
+            posX += moveDist;
+          } else {
+            if (collisions.tr && !collisions.br) {
+              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+            } else if (collisions.br && !collisions.tr) {
+              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+            }
+          }
+        }
+        if (eventKey.current === "ArrowLeft") {
+          const { hasCollision, collisions } = checkCollision(posX - moveDist, posY);
+          if (!hasCollision) {
+            posX -= moveDist;
+          } else {
+            if (collisions.tl && !collisions.bl) {
+              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+            } else if (collisions.bl && !collisions.tl) {
+              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+            }
+          }
+        }
+        if (eventKey.current === "ArrowUp") {
+          const { hasCollision, collisions } = checkCollision(posX, posY - moveDist);
+          if (!hasCollision) {
+            posY -= moveDist;
+          } else {
+            if (collisions.tl && !collisions.tr) {
+              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+            } else if (collisions.tr && !collisions.tl) {
+              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+            }
+          }
+        }
+        if (eventKey.current === "ArrowDown") {
+          const { hasCollision, collisions } = checkCollision(posX, posY + moveDist);
+          if (!hasCollision) {
+            posY += moveDist;
+          } else {
+            if (collisions.bl && !collisions.br) {
+              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+            } else if (collisions.br && !collisions.bl) {
+              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+            }
+          }
+        }
+        playerEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
 
-        player.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
 
-        // next frame
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
           animationTimer = 0;
@@ -89,11 +161,9 @@ export function game() {
           if (frameIndex >= anim.col.length) frameIndex = 0;
         }
       }
-
-      requestAnimationFrame(update);
+      requestAnimationFrame(loop);
     }
-
-    requestAnimationFrame(update);
+    loop(0);
   }, []);
 
   return jsx(
@@ -102,9 +172,9 @@ export function game() {
       className: "game-container",
       onKeydown: handleKeyDown,
       onKeyup: handleKeyUp,
-      autoFocus: "true",
+      autoFocus: true,
       tabIndex: 0,
     },
-    map(playerRef, bomRef)
+    map(playersRef, bomRef)
   );
 }

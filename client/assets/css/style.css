@@ -75,26 +75,7 @@ body {
   background-image: url("../images/tile6.jpg");
 }
 
-.player {
-  position: absolute;
-  width: 50px;
-  height: 50px;
-  z-index: 100;
-  background-image: url("../images/player1.png");
-  background-position: -5px -13px;
-  background-repeat: no-repeat;
-  image-rendering: pixelated;
-}
 
-.bom {
-  position: absolute;
-  width: 50px;
-  height: 50px;
-  background: rgb(255, 0, 0);
-  top: 0px;
-  left: 0px;
-  z-index: 10;
-}
 
 .container {
   max-width: 900px;
@@ -718,4 +699,40 @@ p[style*="color: red"],
   .chat-message {
     font-size: 9px;
   }
+}
+
+.player {
+  position: absolute;
+  width: 50px;
+  height: 64px;
+  z-index: 100;
+  background-position: -5px -13px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.player0{
+  background-image: url("../images/player1.png");
+}
+.player1{
+  background-image: url("../images/player1.png");
+}
+
+.game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bom {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: rgb(255, 0, 0);
+  top: 0px;
+  left: 0px;
+  z-index: 10;
 }
