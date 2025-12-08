@@ -39,7 +39,7 @@ export function generateMap(rows, cols) {
         const rand = Math.random();
         if (
           rand < 0.4 &&
-          count < 10 &&
+          count < 50 &&
           !(r <= 2 && c <= 3) &&
           !(r >= rows - 3 && c >= cols - 4) &&
           !(r <= 2 && c >= cols - 4) &&
