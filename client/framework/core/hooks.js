@@ -57,7 +57,7 @@ export function useState(initialValue) {
     if (typeof newValue === "function") {
       states[currentIndex] = newValue(states[currentIndex]);
     } else {
-      console.log(states, currentIndex);
+      // console.log(states, currentIndex);
 
       states[currentIndex] = newValue;
     }
@@ -93,7 +93,7 @@ export function useEffect(callback, dependencies) {
   const hasChanged = areDepsChanged(oldDependencies, dependencies);
 
   if (hasChanged) {
-    console.log("effects", effects);
+    // console.log("effects", effects);
 
     pindingEffects.push(callback);
   }

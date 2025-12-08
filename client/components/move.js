@@ -30,7 +30,7 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("keyup", (e) => {
     if (currentKey === e.key) {
-        console.log('ggggggggggz');
+        // console.log('ggggggggggz');
 
         currentKey = null;
         frameIndex = 0;
