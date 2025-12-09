@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "../framework/main.js";
+import { useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
@@ -6,6 +6,21 @@ import { ws } from "../assets/js/ws.js";
 console.log(ws, "websoket");
 
 export function game() {
+  const [chat, setChat] = useState([]);
+  const [msg, setMsg] = useState("")
+  const sendMsg = (e) => {
+    if (!msg.trim() || msg.trim().length >= 40) return;
+
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        msg,
+      })
+    );
+
+    setMsg("");
+    e.target.value = "";
+  };
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -107,6 +122,12 @@ export function game() {
 
         el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
         el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      }
+      if (data.type === "message") {
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
       }
     };
 
@@ -213,6 +234,28 @@ export function game() {
       tabIndex: 0,
     },
     jsx("div", null, map(playersRef, bomRef)),
-    jsx("h1", null, ws.username)
-  );
+    jsx("div", { className: "chat-section-game" },
+      jsx("h3", null, "Game Chat"),
+      jsx("div", { className: "chat-messages" },
+        ...chat.map((c) =>
+          jsx("div", { className: "chat-message" },
+            jsx("span", { className: "username" }, c.username + ": "),
+            jsx("span", null, c.msg)
+          )
+        )
+      ),
+
+      jsx("div", { className: "chat-input-container" },
+        jsx("input", {
+          type: "text",
+          value: msg,
+          placeholder: "Type your message...",
+          oninput: (e) => setMsg(e.target.value),
+          onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
+        }),
+        jsx("button", {
+          onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) }
+        }, "Send")
+      )
+    ));
 }
