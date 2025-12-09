@@ -59,11 +59,12 @@ export function game() {
       const absX = baseX + newX;
       const absY = baseY + newY;
 
+      // Full square fit (62x62) to eliminate both horizontal and vertical sliding
       const hitBox = {
-        x: 20,
-        y: 20,
-        w: 40,
-        h: 40,
+        x: 1,
+        y: 1,
+        w: 62,
+        h: 62,
       };
 
       const points = {
@@ -184,7 +185,7 @@ export function game() {
             }
           }
         }
-        playerEl.style.transform = `translate3d(${posX}px, ${posY - 15}px, 0)`;
+        playerEl.style.transform = `translate3d(${posX}px, ${posY - 25}px, 0)`;
 
         animationTimer += delta;
         if (animationTimer > animationSpeed) {

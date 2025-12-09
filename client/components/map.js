@@ -37,10 +37,10 @@ export function map(playersRef, bomRef) {
         console.log("Map dimensions found:", width, height);
 
         setPlayerPosition({
-          0: { top: "50px", left: "50px" },
-          1: { top: "50px", left: `${width - 100}px` },
-          2: { top: `${height - 114}px`, left: `${width - 100}px` },
-          3: { top: `${height - 114}px`, left: "50px" },
+          0: { top: "64px", left: "64px" },
+          1: { top: "64px", left: `${width - 96}px` },
+          2: { top: `${height - 96}px`, left: `${width - 96}px` },
+          3: { top: `${height - 96}px`, left: "64px" },
         });
       }
     });
