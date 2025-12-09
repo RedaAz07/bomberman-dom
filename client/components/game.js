@@ -1,9 +1,20 @@
-import { Store, useEffect, useRef } from "../framework/main.js";
+import { Store, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
 
 export function game() {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    function handleResize() {
+      const widthScale = window.innerWidth / 960;
+      const heightScale = window.innerHeight / 960;
+      const newScale = Math.min(widthScale, heightScale);
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+  }, []);
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -52,7 +63,7 @@ export function game() {
         x: 0,
         y: 14,
         w: 48,
-        h: 48
+        h: 48,
       };
 
       const points = {
@@ -71,7 +82,11 @@ export function game() {
         const tileY = Math.floor(point.y / 50);
 
         let isBlocked = false;
-        if (!mapData || !mapData[tileY] || mapData[tileY][tileX] === undefined) {
+        if (
+          !mapData ||
+          !mapData[tileY] ||
+          mapData[tileY][tileX] === undefined
+        ) {
           isBlocked = true;
         } else if (mapData[tileY][tileX] !== 0) {
           isBlocked = true;
@@ -96,63 +111,80 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX }px -${
-          frameY 
-        }px`;
-        
+        playerEl.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+
         // movement with deltaTime
         const moveDist = speed * delta;
 
         if (eventKey.current === "ArrowRight") {
-          const { hasCollision, collisions } = checkCollision(posX + moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX + moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX += moveDist;
           } else {
             if (collisions.tr && !collisions.br) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.br && !collisions.tr) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowLeft") {
-          const { hasCollision, collisions } = checkCollision(posX - moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX - moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX -= moveDist;
           } else {
             if (collisions.tl && !collisions.bl) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.bl && !collisions.tl) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowUp") {
-          const { hasCollision, collisions } = checkCollision(posX, posY - moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY - moveDist
+          );
           if (!hasCollision) {
             posY -= moveDist;
           } else {
             if (collisions.tl && !collisions.tr) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.tr && !collisions.tl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowDown") {
-          const { hasCollision, collisions } = checkCollision(posX, posY + moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY + moveDist
+          );
           if (!hasCollision) {
             posY += moveDist;
           } else {
             if (collisions.bl && !collisions.br) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.br && !collisions.bl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
         playerEl.style.transform = `translate3d(${posX}px, ${posY - 15}px, 0)`;
-
 
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
@@ -175,6 +207,23 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    map(playersRef, bomRef)
+    jsx(
+      "div",
+      {
+        className: "game-area",
+        style: {
+          width: 960,
+          height: 960,
+          // Apply the scale
+          transform: `scale(${scale})`,
+          // Ensure scaling happens from the center
+          transformOrigin: "center center",
+          // CRITICAL: Keep pixel art sharp
+          imageRendering: "pixelated",
+          position: "relative",
+        },
+      },
+      map(playersRef, bomRef)
+    )
   );
 }

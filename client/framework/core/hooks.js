@@ -7,6 +7,24 @@ let effectIndex = 0;
 export let pindingEffects = [];
 let refs = [];
 let refIndex = 0;
+let isRenderScheduled = false;
+
+export function scheduleRender() {
+  // 1. If we already planned a render, don't plan another one.
+  if (isRenderScheduled) return;
+
+  // 2. Lock the scheduler
+  isRenderScheduled = true;
+
+  // 3. Queue the render in the Microtask queue
+  // This runs immediately after your current function finishes,
+  // but BEFORE the browser repaints.
+  queueMicrotask(() => {
+    render(); // Your main render function
+    isRenderScheduled = false; // Unlock for next time
+    stateIndex = 0; // Reset your hook index
+  });
+}
 /**
  * Resets all hook indices and clears pending effects
  * Called before each render to prepare for fresh hook execution
@@ -20,13 +38,6 @@ export function clearhooks() {
   refIndex = 0;
   pindingEffects = [];
 }
-
-
-
-
-
-
-
 
 export function clearStates() {
   states = [];
@@ -61,7 +72,7 @@ export function useState(initialValue) {
 
       states[currentIndex] = newValue;
     }
-    render();
+    scheduleRender();
   }
 
   stateIndex++;
