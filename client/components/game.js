@@ -60,10 +60,10 @@ export function game() {
       const absY = baseY + newY;
 
       const hitBox = {
-        x: 0,
-        y: 14,
-        w: 48,
-        h: 48,
+        x: 20,
+        y: 20,
+        w: 40,
+        h: 40,
       };
 
       const points = {
@@ -78,8 +78,8 @@ export function game() {
 
       for (const key in points) {
         const point = points[key];
-        const tileX = Math.floor(point.x / 50);
-        const tileY = Math.floor(point.y / 50);
+        const tileX = Math.floor(point.x / 64);
+        const tileY = Math.floor(point.y / 64);
 
         let isBlocked = false;
         if (

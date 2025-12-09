@@ -21,9 +21,9 @@ body {
 
   position: relative;
   /* 9 columns * 40px = 360px */
-  width: 750px;
+  width: 960px;
   /* 9 rows * 40px = 360px */
-  height: 750px;
+  height: 960px;
   background-color: #2e4e35;
   overflow: hidden;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -41,28 +41,28 @@ body {
 }
 
 .tile-grass {
-  background-image: url("../images/tile1.jpg");
+  background-image: url("../images/3.png");
 }
 
 .tile-braml {
-  background-image: url("../images/tile2.jpg");
+  background-image: url("../images/Gemini_Generated.png");
   will-change: transform;
 }
 
 .tile-stone {
-  background-image: url("../images/tile3.jpg");
+  background-image: url("../images/1.png");
 }
 
 .tile-wall-vertical {
-  background-image: url("../images/tile4.jpg");
+  background-image: url("../images/10.png");
 }
 
 .tile-wall-horizontal {
-  background-image: url("../images/tile5.jpg");
+  background-image: url("../images/10.png");
 }
 
 .tile-wall-corner {
-  background-image: url("../images/tile6.jpg");
+  background-image: url("../images/8.png");
 }
 
 /* Main Container */
