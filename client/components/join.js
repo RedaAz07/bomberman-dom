@@ -9,6 +9,7 @@ export function Join() {
     const handleJoin = (e) => {
         if (!name.trim() || name.trim() >= 10) return;
         ws.username = name
+
         ws.send(JSON.stringify({
             type: "join",
             username: name.trim()

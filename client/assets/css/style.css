@@ -14,7 +14,6 @@ body {
   align-items: center;
   min-height: 100vh;
   margin: 0;
-  padding: 20px;
 }
 
 .game-container {
@@ -711,12 +710,22 @@ p[style*="color: red"],
   image-rendering: pixelated;
 }
 
-.player0{
+.player0 {
+  background-image: url("../images/playerbaid.png");
+}
+
+.player1 {
   background-image: url("../images/player1.png");
 }
-.player1{
+
+.player2 {
   background-image: url("../images/player1.png");
 }
+
+.player3 {
+  background-image: url("../images/player1.png");
+}
+
 
 .game-container {
   position: relative;

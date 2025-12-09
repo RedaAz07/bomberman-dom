@@ -13,6 +13,7 @@ function createRoom() {
 
   const room = {
     id: rooms.length + 1,
+    count: 0,
     players: [],
     map,
     collisionMap,
@@ -23,6 +24,7 @@ function createRoom() {
   rooms.push(room);
   return room;
 }
+
 
 function findOrCreateRoom() {
   let room = rooms.find((r) => r.disponible && r.players.length < 4);
@@ -43,7 +45,7 @@ function broadcastRoom(room, obj) {
 function startGameTimer(room) {
   if (room.players.length <= 1) return;
 
-  if (room.players.length === 2) room.timeLeft = 5;
+  if (room.players.length === 2) room.timeLeft = 1;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
@@ -161,6 +163,7 @@ wss.on("connection", (socket) => {
       }
 
       room.players.push({ username, socket });
+      room.count++
       socket.roomId = room.id;
       socket.username = username;
 
@@ -187,6 +190,20 @@ wss.on("connection", (socket) => {
         username: socket.username,
         msg: data.msg,
       });
+    }
+
+    if (data.type === "move") {
+      console.log("data dyal server",data);
+      
+      const room = rooms.find((r) => r.id === data.roomId)
+      broadcastRoom(room, {
+        type: "player-move",
+        username: data.username,
+        x: data.x,
+        y: data.y,
+        frameX: data.frameX,
+        frameY: data.frameY
+      })
     }
   });
 

@@ -1,7 +1,9 @@
-import { Store, useEffect, useRef } from "../framework/main.js";
+import { useEffect, useRef } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
+import { ws } from "../assets/js/ws.js";
+console.log(ws, "websoket");
 
 export function game() {
   let frameIndex = 0;
@@ -35,7 +37,8 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
-    const playerEl = playersRef[0].current;
+    const id = store.get().players.findIndex((p) => p.username === ws.username)
+    const playerEl = playersRef[id].current;
     let lastTime = 0;
     let animationTimer = 0;
     let animationSpeed = 80;
@@ -83,6 +86,32 @@ export function game() {
       return { hasCollision, collisions };
     }
 
+
+
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log(data, "dataaaaaaaaaa dyal move");
+
+      if (data.type === "player-move") {
+        const { username, x, y, frameX, frameY } = data;
+
+        if (username === ws.username) return;
+
+        const players = store.get().players;
+        const index = players.findIndex(p => p.username === username);
+        if (index === -1) return;
+
+        const el = playersRef[index]?.current;
+        if (!el) return;
+
+        el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      }
+    };
+
+
+
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
@@ -96,10 +125,8 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX + 5}px -${
-          frameY + 13
-        }px`;
-        
+        playerEl.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+
         // movement with deltaTime
         const moveDist = speed * delta;
 
@@ -152,7 +179,17 @@ export function game() {
           }
         }
         playerEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
-
+        ws.send(
+          JSON.stringify({
+            type: "move",
+            roomId: ws.roomId,
+            username: ws.username,
+            x: posX,
+            y: posY,
+            frameX: frameX,
+            frameY: frameY
+          })
+        );
 
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
@@ -175,6 +212,7 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    map(playersRef, bomRef)
+    jsx("div", null, map(playersRef, bomRef)),
+    jsx("h1", null, ws.username)
   );
 }

@@ -40,7 +40,9 @@ export function Lobby() {
       }
 
       if (data.type === "start-game") {
-        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players });
+        console.log(data);
+
+        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username });
         navigate("/map");
       }
     };
