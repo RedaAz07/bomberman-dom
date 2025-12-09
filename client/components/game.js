@@ -96,8 +96,8 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX + 5}px -${
-          frameY + 13
+        playerEl.style.backgroundPosition = `-${frameX }px -${
+          frameY 
         }px`;
         
         // movement with deltaTime
@@ -151,7 +151,7 @@ export function game() {
             }
           }
         }
-        playerEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+        playerEl.style.transform = `translate3d(${posX}px, ${posY - 15}px, 0)`;
 
 
         animationTimer += delta;
