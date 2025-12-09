@@ -1,9 +1,23 @@
 import { Store, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
-import { map } from "./map.js";
+
+import { getTileStyle } from "../utils/map.js";
+
+const tileClass = {
+  0: "tile tile-grass",
+  1: "tile tile-wall-vertical",
+  2: "tile tile-braml",
+  3: "tile tile-wall-corner",
+  4: "tile tile-stone",
+};
 
 export function game() {
+  const Map = store.get().map;
+  const bom = store.get().bom;
+  const players = store.get().players;
+  const [grid, setGrid] = useState(Map);
+
   let frameIndex = 0;
   const FRAMES = {
     ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
@@ -26,16 +40,7 @@ export function game() {
       eventKey.current = e.key;
     }
     if (e.key === " ") {
-
-      const pl = playersRef[0].current.getBoundingClientRect()
-      const b = {
-        top: pl.top,
-        left: pl.left,
-      }
-      setBombs(prev => {
-        prev.push(b)
-        return prev
-      })
+      dropBomb();
     }
   }
 
@@ -223,6 +228,51 @@ export function game() {
     loop(0);
   }, []);
 
+
+  // ! map 
+  const mapRef = useRef(null);
+  const [playerPosition, setPlayerPosition] = useState({
+    0: { top: "0px", left: "0px" },
+    1: { top: "0px", left: "0px" },
+    2: { top: "0px", left: "0px" },
+    3: { top: "0px", left: "0px" },
+  });
+
+  useEffect(() => {
+    // 1. Safety check: If ref is null, wait for next render
+    if (!mapRef.current) return;
+
+    // 2. Create an observer that triggers whenever the Map changes size
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      // Get accurate dimensions from the observer entry
+      const width = entry.contentRect.width;
+      const height = entry.contentRect.height;
+
+      // Only update if we actually have dimensions (prevents 0px glitch)
+      if (width > 0 && height > 0) {
+        // console.log("Map dimensions found:", width, height);
+
+        setPlayerPosition({
+          0: { top: "37px", left: "50px" },
+          1: { top: "37px", left: `${width - 100}px` },
+          2: { top: `${height - 114}px`, left: `${width - 100}px` },
+          3: { top: `${height - 114}px`, left: "50px" },
+        });
+      }
+    });
+
+    // 3. Start observing the map
+    observer.observe(mapRef.current);
+
+  }, []); // Run once to attach the observer
+
+
+  // console.log("playytreé", players);
+
+  // ! end map 
   return jsx(
     "div",
     {
@@ -232,7 +282,51 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    map(playersRef),
-    ...bombs.map((b) => jsx("div", { className: "bomb", style: { top: `${b.top}px`, left: `${b.left}px` }, ref: bombRef }))
+    //!map
+    jsx(
+      "div",
+      { className: "map-container", ref: mapRef },
+      ...players.map((p, i) => {
+        return jsx("div", {
+          className: `player player${i}`,
+          style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
+          key: `${p.username}`,
+          ref: playersRef[i],
+        });
+      }),
+      bom && jsx("div", { className: "bom", ref: bomRef }),
+      ...Map.map((row, rowIndex) =>
+        jsx(
+          "div",
+          { className: "map-row" },
+          ...row.map((cell, colIndex) =>
+            cell === 2
+              ? [
+                jsx("div", {
+                  className: "tile tile-grass",
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+                jsx("div", {
+                  className: tileClass[cell],
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                }),
+              ]
+              : jsx("div", {
+                className: tileClass[cell],
+                style: getTileStyle(rowIndex, colIndex, cell),
+                "data-row": rowIndex,
+                "data-col": colIndex,
+              })
+          )
+        )
+      )
+    )
+
+    //!endmap
+    , ...bombs.map((b) => jsx("div", { className: "bomb", style: { top: `${b.top}px`, left: `${b.left}px` }, ref: bombRef }))
   );
 }

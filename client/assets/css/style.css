@@ -721,7 +721,6 @@ p[style*="color: red"],
   image-rendering: pixelated;
   background-size: 250px 250px;
   background-position: 0px;
-  border: 2px solid rgb(81, 255, 0);
 }
 
 .player0 {
