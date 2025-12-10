@@ -49,8 +49,9 @@ export function Lobby() {
   }, []);
 
   const sendMsg = (e) => {
-    if (!msg.trim() || msg.trim().length >= 40) return;
-
+    console.log(msg, msg.length);
+    if (!msg.trim() || msg.trim().length > 30) return;
+    console.log("dkhl f lobby");
     ws.send(
       JSON.stringify({
         type: "message",
@@ -60,6 +61,7 @@ export function Lobby() {
 
     setMsg("");
     e.target.value = "";
+    e.target.previousSibling.value = ""
   };
 
   return jsx("div", { className: "container lobby-wrapper" },
@@ -124,7 +126,7 @@ export function Lobby() {
               onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
             }),
             jsx("button", {
-              onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) }
+              onclick: (e) => { sendMsg(e) }
             }, "Send")
           )
         )

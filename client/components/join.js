@@ -7,7 +7,9 @@ export function Join() {
     const [error, setError] = useState("");
 
     const handleJoin = (e) => {
-        if (!name.trim() || name.trim() >= 10) return;
+        console.log(name.length);
+
+        if (!name.trim() || name.trim().length > 10) return;
         ws.username = name
 
         ws.send(JSON.stringify({
@@ -16,6 +18,7 @@ export function Join() {
         }));
         setName("")
         e.target.value = ""
+        e.target.previousSibling.value = ""
     };
 
     ws.onmessage = (event) => {
@@ -44,7 +47,7 @@ export function Join() {
         }),
 
         jsx("button", {
-            onclick: (e) => { e.target.previousSibling.value = ""; handleJoin(e) },
+            onclick: (e) => { handleJoin(e) },
             className: "join-button"
         }, "🎮 JOIN GAME 🎮"),
 

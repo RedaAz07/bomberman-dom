@@ -8,8 +8,17 @@ console.log(ws, "websoket");
 export function game() {
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("")
+  const [lives, setLives] = useState(3);
+  const [bombs, setBombs] = useState(1);
+  const [bombRange, setBombRange] = useState(1);
+  const [timer, setTimer] = useState(180);
+  const [score, setScore] = useState(0);
+  const [playersAlive, setPlayersAlive] = useState(4);
   const sendMsg = (e) => {
-    if (!msg.trim() || msg.trim().length >= 40) return;
+    console.log(msg, msg.length);
+
+    if (!msg.trim() || msg.trim().length > 30) return;
+    console.log("dkhl");
 
     ws.send(
       JSON.stringify({
@@ -20,6 +29,7 @@ export function game() {
 
     setMsg("");
     e.target.value = "";
+    e.target.previousSibling.value = "";
   };
   let frameIndex = 0;
   const frameWidth = 64;
@@ -106,8 +116,6 @@ export function game() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log(data, "dataaaaaaaaaa dyal move");
-
       if (data.type === "player-move") {
         const { username, x, y, frameX, frameY } = data;
 
@@ -233,29 +241,87 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx("div", null, map(playersRef, bomRef)),
-    jsx("div", { className: "chat-section-game" },
-      jsx("h3", null, "Game Chat"),
-      jsx("div", { className: "chat-messages" },
-        ...chat.map((c) =>
-          jsx("div", { className: "chat-message" },
-            jsx("span", { className: "username" }, c.username + ": "),
-            jsx("span", null, c.msg)
+    jsx("div", { className: "game-hud-container" },
+
+
+      jsx("div", { className: "hud-section player-info" },
+        jsx("div", { className: "hud-label" }, "PLAYER"),
+        jsx("div", { className: "hud-value player-name" }, ws.username)
+      ),
+      jsx("div", { className: "hud-bottom" },
+
+        jsx("div", { className: "hud-stat lives-stat" },
+          jsx("div", { className: "stat-icon" }, "❤️"),
+          jsx("div", { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "LIVES"),
+            jsx("div", { className: "stat-value" },
+              jsx("div", { className: "hearts-container" },
+                ...Array.from({ length: lives || 3 }, (_, i) =>
+                  jsx("span", { className: "heart", key: i }, "❤️")
+                )
+              )
+            )
+          )
+        ),
+
+        jsx("div", { className: "hud-stat bombs-stat" },
+          jsx("div", { className: "stat-icon" }, "💣"),
+          jsx("div", { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "BOMBS"),
+            jsx("div", { className: "stat-value bombs-count" }, bombs || 1)
+          )
+        ),
+
+        jsx("div", { className: "hud-stat range-stat" },
+          jsx("div", { className: "stat-icon" }, "💥"),
+          jsx("div", { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "RANGE"),
+            jsx("div", { className: "stat-value" }, bombRange || 1)
+          )
+        ),
+
+        jsx("div", { className: "hud-stat players-stat" },
+          jsx("div", { className: "stat-icon" }, "👥"),
+          jsx("div", { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "ALIVE"),
+            jsx("div", { className: "stat-value" }, playersAlive || 1)
           )
         )
       ),
+      jsx("div", { className: "hud-section1" },
+        jsx("div", { className: "timer-icon" }, "⏱️"),
+        jsx("div", { className: "timer-display" },
+          jsx("div", { className: "timer-value1" },
+            Math.floor(timer / 60) + ":" + String(timer % 60).padStart(2, '0')
+          ),
+        )
+      ),
 
-      jsx("div", { className: "chat-input-container" },
-        jsx("input", {
-          type: "text",
-          value: msg,
-          placeholder: "Type your message...",
-          oninput: (e) => setMsg(e.target.value),
-          onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
-        }),
-        jsx("button", {
-          onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) }
-        }, "Send")
-      )
-    ));
+    ),
+    jsx("div", { className: "combine-chat-map" },
+      jsx("div", null, map(playersRef, bomRef)),
+      jsx("div", { className: "chat-section-game" },
+        jsx("h3", null, "Game Chat"),
+        jsx("div", { className: "chat-messages" },
+          ...chat.map((c) =>
+            jsx("div", { className: "chat-message" },
+              jsx("span", { className: "username" }, c.username + ": "),
+              jsx("span", null, c.msg)
+            )
+          )
+        ),
+
+        jsx("div", { className: "chat-input-container" },
+          jsx("input", {
+            type: "text",
+            value: msg,
+            placeholder: "Type your message...",
+            oninput: (e) => setMsg(e.target.value),
+            onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
+          }),
+          jsx("button", {
+            onclick: (e) => { sendMsg(e) }
+          }, "Send")
+        )
+      )));
 }
