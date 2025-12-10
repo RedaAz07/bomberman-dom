@@ -45,8 +45,8 @@ export function generateMap(rows, cols) {
           !(r <= 2 && c >= cols - 4) &&
           !(r >= rows - 3 && c <= 3)
         ) {
-          row.push(2); // Braml
-          collisionRow.push(1);
+          row.push(0); // Braml
+          collisionRow.push(0);
           count++;
         } else {
           row.push(0); // Grass

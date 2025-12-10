@@ -16,7 +16,7 @@ const tileClass = {
 export function game() {
   //! state for the map and players
   const bombsRef = useRef([]);
-  const [bombs, setBombs] = useState([]);
+  const bombRef = useRef(null);
   const Map = store.get().map;
   const players = store.get().players;
   const [grid, setGrid] = useState(Map);
@@ -29,6 +29,7 @@ export function game() {
   });
   //! STATE AND REFS
   const eventKey = useRef(null);
+  const spaceKey = useRef(false);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const mapData = store.get().collisionMap;
   //! ANIMATION VARIABLES
@@ -48,16 +49,29 @@ export function game() {
     const playerEl = playersRef[id].current;
     if (!playerEl) return;
 
-    const x = Math.floor((playerEl.offsetLeft + 24) / 50) * 50;
-    const y = Math.floor((playerEl.offsetTop + 24) / 50) * 50;
+    function getLocalPosition(el, parent) {
+      const elBox = el.getBoundingClientRect();
+      const parentBox = parent.getBoundingClientRect();
+
+      return {
+        x: elBox.left - parentBox.left,
+        y: elBox.top - parentBox.top
+      };
+    }
+    const pos = getLocalPosition(playerEl, mapRef.current);
+
+    const x = Math.floor((Math.round(pos.x / 50) * 50) / 50);
+    const y = Math.floor((Math.round((pos.y + 13) / 50) * 50) / 50);
     const bombId = `bomb-${Date.now()}`;
 
 
     setGrid((prevGrid) => {
       const newGrid = prevGrid.map((row) => row.slice());
-      const colIndex = x / 50;
-      const rowIndex = y / 50;
+      const colIndex = x;
+      const rowIndex = y;
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
+
+
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
       }
       return newGrid;
@@ -65,18 +79,18 @@ export function game() {
 
 
 
-    // Avoid placing multiple bombs in the same position
+
     for (const bomb of bombsRef.current) {
       if (bomb.x === x && bomb.y === y) {
+
         return;
       }
     }
 
     const newBomb = { id: bombId, x, y };
     bombsRef.current = [...bombsRef.current, newBomb];
-    setBombs(bombsRef.current);
 
-    // Send bomb placement to server
+
     ws.send(
       JSON.stringify({
         type: "place-bomb",
@@ -88,9 +102,20 @@ export function game() {
 
     // Remove bomb after 3 seconds
     setTimeout(() => {
+      // 1. remove bomb from state
       bombsRef.current = bombsRef.current.filter(b => b.id !== bombId);
-      setBombs(bombsRef.current);
-      
+
+      // 2. clear bomb from map grid
+      setGrid(prevGrid => {
+
+        const newGrid = prevGrid.map(row => row.slice());
+        const colIndex = x;
+        const rowIndex = y;
+        if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 5) {
+          newGrid[rowIndex][colIndex] = 0;
+        }
+        return newGrid;
+      });
 
     }, 3000);
   }
@@ -100,6 +125,7 @@ export function game() {
       eventKey.current = e.key;
     }
     if (e.key === " ") {
+      spaceKey.current = true;
       placeBomb();
     }
   }
@@ -117,6 +143,18 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
+
+    //! bomb
+
+    let colb = 0;
+    const colsbomb = 5;
+    const rowsbomb = 1;
+    let bombFrameIndex = 0;
+    let animationTimerbomb = 0;
+    let animationSpeedbomb = 300
+    const frameWidthbomb = 50;
+    const frameHeightbomb = 50;
+    const bombFrames = { bomb: { row: 0, col: [0, 1, 2, 3, 4] } }
     //! setup the players 
     if (!mapRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -203,7 +241,7 @@ export function game() {
         const el = playersRef[index]?.current;
         if (!el) return;
 
-        el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
         el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       }
     };
@@ -213,6 +251,25 @@ export function game() {
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
+
+
+
+      if (bombRef.current) {
+        const maxFrames = bombFrames.bomb.col.length;
+        if (bombFrameIndex >= maxFrames) {
+          bombFrameIndex = 0;
+        } else {
+          const col = bombFrameIndex;
+          const frameX = col * frameWidthbomb;
+          bombRef.current.style.backgroundPosition = `-${frameX}px`;
+        }
+        animationTimerbomb += delta;
+        if (animationTimerbomb > animationSpeedbomb) {
+          animationTimerbomb = 0;
+          bombFrameIndex++
+        }
+      }
+
 
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
@@ -327,13 +384,20 @@ export function game() {
           { className: "map-row" },
           ...row.map((cell, colIndex) =>
 
-            //! error 
             cell === 5
-              ? jsx("div", {
-                className: "tile tile-bomb",
+              ? [jsx("div", {
+                className: "tile-bomb",
                 style: getTileStyle(rowIndex, colIndex, cell),
-                key: `${rowIndex}-${colIndex}`,
-              })
+                key: `${crypto.randomUUID()}`,
+                ref: bombRef,
+              }), jsx("div", {
+                className: "tile tile-grass",
+                style: getTileStyle(rowIndex, colIndex, cell),
+                "data-row": rowIndex,
+                "data-col": colIndex,
+                key: `${crypto.randomUUID()}`,
+
+              })]
               :
               cell === 2
                 ? [
@@ -342,12 +406,16 @@ export function game() {
                     style: getTileStyle(rowIndex, colIndex, cell),
                     "data-row": rowIndex,
                     "data-col": colIndex,
+                    key: `${crypto.randomUUID()}`,
+
                   }),
                   jsx("div", {
                     className: tileClass[cell],
                     style: getTileStyle(rowIndex, colIndex, cell),
                     "data-row": rowIndex,
                     "data-col": colIndex,
+                    key: `${crypto.randomUUID()}`,
+
                   }),
                 ]
                 : jsx("div", {
@@ -355,6 +423,8 @@ export function game() {
                   style: getTileStyle(rowIndex, colIndex, cell),
                   "data-row": rowIndex,
                   "data-col": colIndex,
+                  key: `${crypto.randomUUID()}`,
+
                 })
           )
         )
