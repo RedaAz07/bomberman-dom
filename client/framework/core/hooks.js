@@ -4,7 +4,6 @@ let states = [];
 let stateIndex = 0;
 let effects = [];
 let effectIndex = 0;
-export let pindingEffects = [];
 let refs = [];
 let refIndex = 0;
 let isRenderScheduled = false;
@@ -36,12 +35,17 @@ export function clearhooks() {
   stateIndex = 0;
   effectIndex = 0;
   refIndex = 0;
-  pindingEffects = [];
 }
 
 export function clearStates() {
   states = [];
   refs = [];
+  effects.forEach((hook) => {
+    // If this hook has a cleanup function saved, run it!
+    if (hook && hook.cleanup) {
+      hook.cleanup();
+    }
+  });
   effects = [];
   clearhooks();
 }
@@ -100,16 +104,43 @@ export function useEffect(callback, dependencies) {
     console.error("useEffect second argument must be an array or undefined");
     return;
   }
-  const oldDependencies = effects[effectIndex];
-  const hasChanged = areDepsChanged(oldDependencies, dependencies);
+  const oldHook = effects[effectIndex];
 
-  if (hasChanged) {
-    // console.log("effects", effects);
-
-    pindingEffects.push(callback);
+  // 1. Check if dependencies changed
+  // If no dependencies array is passed, it always changes.
+  let hasChanged = true;
+  if (oldHook && dependencies) {
+    // Compare every item in the dependency array
+    hasChanged = dependencies.some(
+      (dep, i) => !Object.is(dep, oldHook.deps[i])
+    );
   }
 
-  effects[effectIndex] = dependencies;
+  // 2. If dependencies changed, we need to run the effect
+  if (hasChanged) {
+    // MICROTASK QUEUE:
+    // We shouldn't run effects immediately during render!
+    // We queue them to run AFTER the UI is updated.
+    queueMicrotask(() => {
+      // A. CLEANUP PHASE:
+      // If there was a previous effect, run its cleanup function first.
+      if (oldHook && oldHook.cleanup) {
+        oldHook.cleanup();
+      }
+
+      // B. EXECUTION PHASE:
+      // Run the effect and save the "return" value as the new cleanup.
+      const cleanupFunction = callback();
+
+      // C. SAVE STATE:
+      // Save the cleanup function and dependencies for the next render.
+      effects[effectIndex] = {
+        deps: dependencies,
+        cleanup: cleanupFunction, // <--- THIS is the "return" value
+      };
+    });
+  }
+
   effectIndex++;
 }
 

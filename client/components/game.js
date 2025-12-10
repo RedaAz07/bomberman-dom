@@ -93,7 +93,6 @@ export function game() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log(data, "dataaaaaaaaaa dyal move");
 
       if (data.type === "player-move") {
         const { username, x, y, frameX, frameY } = data;
@@ -232,8 +231,7 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-
-    map(playersRef, bomRef),
+    jsx("div", { className: "map-wrapper" }, map(playersRef, bomRef)),
 
     jsx("h1", null, ws.username)
   );

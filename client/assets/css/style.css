@@ -17,17 +17,25 @@ body {
   overflow: hidden;
 }
 
-
+.map-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+}
 .map-container {
   box-sizing: content-box;
 
   position: relative;
+  max-width: 960px;
+  max-height: 960px;
   /* 9 columns * 40px = 360px */
-  width: 960px;
+  width: 100%;
   /* 9 rows * 40px = 360px */
-  height: 960px;
+  height: 100%;
+  object-fit: contain;
   background-color: #2e4e35;
-  overflow: hidden;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -66,8 +74,6 @@ body {
   background-image: url("../images/5.png");
 }
 
-
-
 .container {
   max-width: 900px;
   width: 100%;
@@ -75,7 +81,8 @@ body {
   border: 4px solid #4a9eff;
   border-radius: 15px;
   padding: 30px;
-  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3), 0 0 40px rgba(74, 158, 255, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3), 0 0 40px rgba(74, 158, 255, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
   animation: fadeIn 0.5s ease-in;
 }
 
@@ -110,7 +117,6 @@ body {
 }
 
 @keyframes colorShift {
-
   0%,
   100% {
     color: #6eb4ff;
@@ -168,8 +174,6 @@ h1 {
   text-shadow: 2px 2px 0 #1f2749, 4px 4px 10px rgba(74, 158, 255, 0.5);
 }
 
-
-
 h2 {
   font-size: 18px;
   color: #4a9eff;
@@ -195,7 +199,6 @@ h3::before {
 }
 
 @keyframes blink {
-
   0%,
   50% {
     opacity: 1;
@@ -223,7 +226,8 @@ input[type="text"] {
 input[type="text"]:focus {
   outline: none;
   border-color: #6eb4ff;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3), 0 0 15px rgba(74, 158, 255, 0.5);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(74, 158, 255, 0.5);
   transform: scale(1.02);
 }
 
@@ -264,7 +268,6 @@ button:active {
 }
 
 @keyframes buttonGlow {
-
   0%,
   100% {
     box-shadow: 0 4px 0 #2d5fa8, 0 6px 15px rgba(74, 158, 255, 0.3);
@@ -334,7 +337,6 @@ p[style*="color: red"],
   margin-bottom: 10px;
 }
 
-
 .timer-label {
   font-size: 11px;
   color: #ffbb4a;
@@ -352,7 +354,6 @@ p[style*="color: red"],
 }
 
 @keyframes countdown-pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -423,7 +424,6 @@ p[style*="color: red"],
   gap: 10px;
   transition: all 0.3s ease;
 }
-
 
 .player-item::before {
   content: "●";
@@ -713,12 +713,15 @@ p[style*="color: red"],
   background-image: url("../images/player1.png");
 }
 
-
 .game-container {
+  /* The wrapper fills the screen and centers the content */
   position: relative;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
 }
 
 .bom {

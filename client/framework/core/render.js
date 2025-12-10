@@ -1,4 +1,4 @@
-import { pindingEffects, clearhooks, clearStates } from "./hooks.js";
+import { clearhooks, clearStates } from "./hooks.js";
 import { updateElement } from "./diff.js";
 
 let root = null;
@@ -38,7 +38,6 @@ export function render(App) {
   getRoot();
   if (App) {    
     clearStates();
-    clearhooks();
     rootElements = App;
     oldVDOM = null; // Clear old VDOM when switching components
     root.innerHTML = ""; // Clear the DOM when navigating to a new 
@@ -49,6 +48,5 @@ export function render(App) {
   updateElement(root, newVDOM, oldVDOM); // diff & patch
   oldVDOM = newVDOM; // save for next render
 
-  pindingEffects.forEach((fn) => fn());
   clearhooks();
 }
