@@ -42,14 +42,13 @@ export function Lobby() {
       if (data.type === "start-game") {
         console.log(data);
 
-        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username });
+        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username, time: data.time });
         navigate("/map");
       }
     };
   }, []);
 
   const sendMsg = (e) => {
-    console.log(msg, msg.length);
     if (!msg.trim() || msg.trim().length > 30) return;
     console.log("dkhl f lobby");
     ws.send(

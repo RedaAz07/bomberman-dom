@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
+import { time } from "node:console";
 
 const PORT = 3000;
 
@@ -17,13 +18,12 @@ function createRoom() {
     players: [],
     map,
     collisionMap,
-    timer: null,
-    timeLeft: null,
     disponible: true,
   };
   rooms.push(room);
   return room;
 }
+
 
 
 function findOrCreateRoom() {
@@ -43,13 +43,12 @@ function broadcastRoom(room, obj) {
 }
 
 function startGameTimer(room) {
-  // if (room.players.length <= 1) return;
+  if (room.players.length <= 1) return;
 
-  // if (room.players.length === 2) room.timeLeft = 2;
-  // if (room.players.length === 4) room.timeLeft = 10;
+  if (room.players.length === 2) room.timeLeft = 4;
+  if (room.players.length === 4) room.timeLeft = 10;
 
-  // if (room.timer) clearInterval(room.timer);
-  room.timeLeft = 5;
+  if (room.timer) clearInterval(room.timer);
 
   room.timer = setInterval(() => {
     room.timeLeft--;

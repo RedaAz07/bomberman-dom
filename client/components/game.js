@@ -9,17 +9,27 @@ export function game() {
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("")
   const [lives, setLives] = useState(3);
-  const [bombs, setBombs] = useState(1);
-  const [bombRange, setBombRange] = useState(1);
-  const [timer, setTimer] = useState(180);
-  const [score, setScore] = useState(0);
-  const [playersAlive, setPlayersAlive] = useState(4);
-  const sendMsg = (e) => {
-    console.log(msg, msg.length);
+  const [bombs, setBombs] = useState(3);
+  const [bombRange, setBombRange] = useState(4);
+  const [Timer, setTimer] = useState("00:00");
+  const eventKey = useRef(null);
+  const bomRef = useRef(null);
+  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const mapData = store.get().collisionMap;
+  const playersAlive = store.get().players.length
+  let frameIndex = 0;
+  const frameWidth = 64;
+  const frameHeight = 64;
+  const FRAMES = {
+    ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+    ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+    ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+    ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+  };
 
+  const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
     console.log("dkhl");
-
     ws.send(
       JSON.stringify({
         type: "message",
@@ -31,20 +41,6 @@ export function game() {
     e.target.value = "";
     e.target.previousSibling.value = "";
   };
-  let frameIndex = 0;
-  const frameWidth = 64;
-  const frameHeight = 64;
-  const FRAMES = {
-    ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
-    ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
-    ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
-    ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
-  };
-  const eventKey = useRef(null);
-  const bomRef = useRef(null);
-  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
-
-  const mapData = store.get().collisionMap;
 
   function handleKeyDown(e) {
     if (FRAMES[e.key]) {
@@ -59,6 +55,24 @@ export function game() {
     }
   }
 
+  useEffect(() => {
+    let obj = {
+      min: 0,
+      sec: 0,
+      text: "00:00"
+    };
+
+    setInterval(() => {
+      obj.sec++;
+
+      if (obj.sec === 60) {
+        obj.min++;
+        obj.sec = 0;
+      }
+
+      setTimer(String(obj.min).padStart(2, "0") + ":" + String(obj.sec).padStart(2, "0"));
+    }, 1000);
+  }, [])
   // SPRITE DATA
 
   useEffect(() => {
@@ -232,6 +246,9 @@ export function game() {
     loop(0);
   }, []);
 
+  console.log(playersAlive);
+  
+
   return jsx(
     "div",
     {
@@ -291,9 +308,7 @@ export function game() {
       jsx("div", { className: "hud-section1" },
         jsx("div", { className: "timer-icon" }, "⏱️"),
         jsx("div", { className: "timer-display" },
-          jsx("div", { className: "timer-value1" },
-            Math.floor(timer / 60) + ":" + String(timer % 60).padStart(2, '0')
-          ),
+          jsx("div", { className: "timer-value1" }, Timer),
         )
       ),
 
