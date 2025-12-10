@@ -745,3 +745,10 @@ p[style*="color: red"],
   left: 0px;
   z-index: 10;
 }
+
+
+
+.tile-bomb {
+  background-image: url("../images/bomb.png");
+  border: solid 2px red;
+}

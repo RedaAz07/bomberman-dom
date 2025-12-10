@@ -1,11 +1,37 @@
-import { useEffect, useRef } from "../framework/main.js";
+import { useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
-import { map } from "./map.js";
 import { ws } from "../assets/js/ws.js";
-console.log(ws, "websoket");
+import { getTileStyle } from "../utils/map.js";
+
+const tileClass = {
+  0: "tile tile-grass", // ard 
+  1: "tile tile-wall-vertical", //  hiit
+  2: "tile tile-braml",// li kaytfjr 
+  3: "tile tile-wall-corner",
+  4: "tile tile-stone", //walo
+  // 5: "tile tile-bomb", // bomb
+};
 
 export function game() {
+  //! state for the map and players
+  const bombsRef = useRef([]);
+  const [bombs, setBombs] = useState([]);
+  const Map = store.get().map;
+  const players = store.get().players;
+  const [grid, setGrid] = useState(Map);
+  const mapRef = useRef(null);
+  const [playerPosition, setPlayerPosition] = useState({
+    0: { top: "0px", left: "0px" },
+    1: { top: "0px", left: "0px" },
+    2: { top: "0px", left: "0px" },
+    3: { top: "0px", left: "0px" },
+  });
+  //! STATE AND REFS
+  const eventKey = useRef(null);
+  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const mapData = store.get().collisionMap;
+  //! ANIMATION VARIABLES
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -15,17 +41,71 @@ export function game() {
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
-  const eventKey = useRef(null);
-  const bomRef = useRef(null);
-  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
 
-  const mapData = store.get().collisionMap;
+  //! BOMB PLACEMENT
+  function placeBomb() {
+    const id = store.get().players.findIndex((p) => p.username === ws.username)
+    const playerEl = playersRef[id].current;
+    if (!playerEl) return;
 
+    const x = Math.floor((playerEl.offsetLeft + 24) / 50) * 50;
+    const y = Math.floor((playerEl.offsetTop + 24) / 50) * 50;
+    const bombId = `bomb-${Date.now()}`;
+
+
+    setGrid((prevGrid) => {
+      const newGrid = prevGrid.map((row) => row.slice());
+      const colIndex = x / 50;
+      const rowIndex = y / 50;
+      if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
+        newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
+      }
+      return newGrid;
+    });
+
+
+
+    // Avoid placing multiple bombs in the same position
+    for (const bomb of bombsRef.current) {
+      if (bomb.x === x && bomb.y === y) {
+        return;
+      }
+    }
+
+    const newBomb = { id: bombId, x, y };
+    bombsRef.current = [...bombsRef.current, newBomb];
+    setBombs(bombsRef.current);
+
+    // Send bomb placement to server
+    ws.send(
+      JSON.stringify({
+        type: "place-bomb",
+        roomId: ws.roomId,
+        username: ws.username,
+        bomb: newBomb
+      })
+    );
+
+    // Remove bomb after 3 seconds
+    setTimeout(() => {
+      bombsRef.current = bombsRef.current.filter(b => b.id !== bombId);
+      setBombs(bombsRef.current);
+      
+
+    }, 3000);
+  }
+  //! EVENT HANDLERS
   function handleKeyDown(e) {
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
     }
+    if (e.key === " ") {
+      placeBomb();
+    }
   }
+
+
+
 
   function handleKeyUp(e) {
     if (eventKey.current === e.key) {
@@ -37,14 +117,34 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
+    //! setup the players 
+    if (!mapRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const width = entry.contentRect.width;
+      const height = entry.contentRect.height;
+      if (width > 0 && height > 0) {
+        setPlayerPosition({
+          0: { top: "37px", left: "50px" },
+          1: { top: "37px", left: `${width - 100}px` },
+          2: { top: `${height - 114}px`, left: `${width - 100}px` },
+          3: { top: `${height - 114}px`, left: "50px" },
+        });
+      }
+    });
+    observer.observe(mapRef.current);
+    //! WEBSOCKET SETUP
     const id = store.get().players.findIndex((p) => p.username === ws.username)
     const playerEl = playersRef[id].current;
+    //! ANIMATION LOOP
     let lastTime = 0;
     let animationTimer = 0;
     let animationSpeed = 80;
     let posX = 0;
     let posY = 0;
     let speed = 0.1;
+    //! COLLISION DETECTION
     function checkCollision(newX, newY) {
       const baseX = playerEl.offsetLeft;
       const baseY = playerEl.offsetTop;
@@ -88,11 +188,9 @@ export function game() {
 
 
 
-
+    //! WEBSOCKET MESSAGE HANDLER for  moving players
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log(data, "dataaaaaaaaaa dyal move");
-
       if (data.type === "player-move") {
         const { username, x, y, frameX, frameY } = data;
 
@@ -111,7 +209,7 @@ export function game() {
     };
 
 
-
+    //! ANIMATION LOOP FUNCTION
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
@@ -212,7 +310,56 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx("div", null, map(playersRef, bomRef)),
+    jsx("div", null, jsx(
+      "div",
+      { className: "map-container", ref: mapRef },
+      ...players.map((p, i) => {
+        return jsx("div", {
+          className: `player player${i}`,
+          style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
+          key: `${p.username}`,
+          ref: playersRef[i],
+        });
+      }),
+      ...grid.map((row, rowIndex) =>
+        jsx(
+          "div",
+          { className: "map-row" },
+          ...row.map((cell, colIndex) =>
+
+            //! error 
+            cell === 5
+              ? jsx("div", {
+                className: "tile tile-bomb",
+                style: getTileStyle(rowIndex, colIndex, cell),
+                key: `${rowIndex}-${colIndex}`,
+              })
+              :
+              cell === 2
+                ? [
+                  jsx("div", {
+                    className: "tile tile-grass",
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                  }),
+                  jsx("div", {
+                    className: tileClass[cell],
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                  }),
+                ]
+                : jsx("div", {
+                  className: tileClass[cell],
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                })
+          )
+        )
+      )
+    )),
     jsx("h1", null, ws.username)
   );
 }
