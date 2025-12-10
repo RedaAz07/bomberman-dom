@@ -34,7 +34,7 @@ export function map(playersRef, bomRef) {
 
       // Only update if we actually have dimensions (prevents 0px glitch)
       if (width > 0 && height > 0) {
-        console.log("Map dimensions found:", width, height);
+        // console.log("Map dimensions found:", width, height);
 
         setPlayerPosition({
           0: { top: "64px", left: "64px" },
@@ -56,7 +56,7 @@ export function map(playersRef, bomRef) {
   const mapData = store.get().map;
   const bom = store.get().bom;
   const players = store.get().players;
-  console.log("playytreé", players);
+  // console.log("playytreé", players);
 
   return jsx(
     "div",

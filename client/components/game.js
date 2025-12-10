@@ -2,6 +2,8 @@ import { Store, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
+import { ws } from "../assets/js/ws.js";
+console.log(ws, "websoket");
 
 export function game() {
   const [scale, setScale] = useState(1);
@@ -46,7 +48,8 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
-    const playerEl = playersRef[0].current;
+    const id = store.get().players.findIndex((p) => p.username === ws.username);
+    const playerEl = playersRef[id].current;
     let lastTime = 0;
     let animationTimer = 0;
     let animationSpeed = 80;
@@ -98,6 +101,27 @@ export function game() {
       }
       return { hasCollision, collisions };
     }
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log(data, "dataaaaaaaaaa dyal move");
+
+      if (data.type === "player-move") {
+        const { username, x, y, frameX, frameY } = data;
+
+        if (username === ws.username) return;
+
+        const players = store.get().players;
+        const index = players.findIndex((p) => p.username === username);
+        if (index === -1) return;
+
+        const el = playersRef[index]?.current;
+        if (!el) return;
+
+        el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      }
+    };
 
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
@@ -186,6 +210,17 @@ export function game() {
           }
         }
         playerEl.style.transform = `translate3d(${posX}px, ${posY - 25}px, 0)`;
+        ws.send(
+          JSON.stringify({
+            type: "move",
+            roomId: ws.roomId,
+            username: ws.username,
+            x: posX,
+            y: posY,
+            frameX: frameX,
+            frameY: frameY,
+          })
+        );
 
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
@@ -225,6 +260,7 @@ export function game() {
         },
       },
       map(playersRef, bomRef)
-    )
+    ),
+    jsx("h1", null, ws.username)
   );
 }

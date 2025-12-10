@@ -38,7 +38,10 @@ export function render(App) {
   getRoot();
   if (App) {    
     clearStates();
+    clearhooks();
     rootElements = App;
+    oldVDOM = null; // Clear old VDOM when switching components
+    root.innerHTML = ""; // Clear the DOM when navigating to a new 
   }
 
   const newVDOM = rootElements(); // new virtual DOM
