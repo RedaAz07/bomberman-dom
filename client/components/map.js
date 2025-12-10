@@ -12,6 +12,22 @@ const tileClass = {
 
 export function map(playersRef, bomRef) {
   const mapRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const width = window.innerWidth + 200;
+    const height = window.innerHeight + 200;
+
+    if (!mapRef.current) return;
+    function handleResize() {
+      const widthScale = window.innerWidth / width;
+      const heightScale = window.innerHeight / height;
+      const newScale = Math.min(widthScale, heightScale);
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+  }, []);
   const [playerPosition, setPlayerPosition] = useState({
     0: { top: "0px", left: "0px" },
     1: { top: "0px", left: "0px" },
@@ -38,9 +54,9 @@ export function map(playersRef, bomRef) {
 
         setPlayerPosition({
           0: { top: "64px", left: "64px" },
-          1: { top: "64px", left: `${width - 96}px` },
-          2: { top: `${height - 96}px`, left: `${width - 96}px` },
-          3: { top: `${height - 96}px`, left: "64px" },
+          1: { top: "64px", left: `${width - 128}px` },
+          2: { top: `${height - 128}px`, left: `${width - 128}px` },
+          3: { top: `${height - 128}px`, left: "64px" },
         });
       }
     });
@@ -60,7 +76,18 @@ export function map(playersRef, bomRef) {
 
   return jsx(
     "div",
-    { className: "map-container", ref: mapRef },
+    {
+      className: "map-container",
+      style: {
+        // Apply the scale
+        transform: `scale(${scale})`,
+        // Ensure scaling happens from the center
+        transformOrigin: "center center",
+        // CRITICAL: Keep pixel art sharp
+        imageRendering: "pixelated",
+      },
+      ref: mapRef,
+    },
     ...players.map((p, i) => {
       return jsx("div", {
         className: `player player${i}`,

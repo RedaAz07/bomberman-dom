@@ -6,17 +6,6 @@ import { ws } from "../assets/js/ws.js";
 console.log(ws, "websoket");
 
 export function game() {
-  const [scale, setScale] = useState(1);
-  useEffect(() => {
-    function handleResize() {
-      const widthScale = window.innerWidth / 960;
-      const heightScale = window.innerHeight / 960;
-      const newScale = Math.min(widthScale, heightScale);
-      setScale(newScale);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-  }, []);
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -118,8 +107,8 @@ export function game() {
         const el = playersRef[index]?.current;
         if (!el) return;
 
-        el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
       }
     };
 
@@ -243,24 +232,9 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx(
-      "div",
-      {
-        className: "game-area",
-        style: {
-          width: 960,
-          height: 960,
-          // Apply the scale
-          transform: `scale(${scale})`,
-          // Ensure scaling happens from the center
-          transformOrigin: "center center",
-          // CRITICAL: Keep pixel art sharp
-          imageRendering: "pixelated",
-          position: "relative",
-        },
-      },
-      map(playersRef, bomRef)
-    ),
+
+    map(playersRef, bomRef),
+
     jsx("h1", null, ws.username)
   );
 }

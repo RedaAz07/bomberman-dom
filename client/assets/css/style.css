@@ -14,16 +14,9 @@ body {
   align-items: center;
   min-height: 100vh;
   margin: 0;
+  overflow: hidden;
 }
 
-.game-container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
 .map-container {
   box-sizing: content-box;
@@ -713,7 +706,9 @@ p[style*="color: red"],
 .player1 {
   background-image: url("../images/player1.png");
 }
-
+.player2 {
+  background-image: url("../images/player1.png");
+}
 .player3 {
   background-image: url("../images/player1.png");
 }
@@ -721,8 +716,6 @@ p[style*="color: red"],
 
 .game-container {
   position: relative;
-  width: 100vw;
-  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
