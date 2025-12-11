@@ -730,7 +730,7 @@ p[style*="color: red"],
 }
 
 .player0 {
-  background-image: url("../images/playerbaid.png");
+  background-image: url("../images/c1.png");
 }
 
 .player1 {
@@ -745,7 +745,80 @@ p[style*="color: red"],
   background-image: url("../images/player1.png");
 }
 
+.player-label {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: label-float 2s ease-in-out infinite;
+}
 
+@keyframes label-float {
+
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+.player-username {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 9px;
+  color: #ffffff;
+  background: linear-gradient(145deg, rgba(255, 107, 107, 0.9), rgba(255, 158, 74, 0.9));
+  border: 2px solid #ff6b6b;
+  border-radius: 12px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(255, 107, 107, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+
+.player0 .player-username {
+  background: linear-gradient(145deg, rgba(74, 158, 255, 0.9), rgba(110, 180, 255, 0.9));
+  border-color: #4a9eff;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(74, 158, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.player1 .player-username {
+  background: linear-gradient(145deg, rgba(78, 255, 142, 0.9), rgba(110, 255, 170, 0.9));
+  border-color: #4eff8e;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(78, 255, 142, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.player2 .player-username {
+  background: linear-gradient(145deg, rgba(255, 187, 74, 0.9), rgba(255, 207, 110, 0.9));
+  border-color: #ffbb4a;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(255, 187, 74, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.player3 .player-username {
+  background: linear-gradient(145deg, rgba(187, 110, 255, 0.9), rgba(207, 140, 255, 0.9));
+  border-color: #bb6eff;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 15px rgba(187, 110, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 
 .bom {
   position: absolute;
