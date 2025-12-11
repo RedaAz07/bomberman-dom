@@ -19,9 +19,11 @@ export function scheduleRender() {
   // This runs immediately after your current function finishes,
   // but BEFORE the browser repaints.
   queueMicrotask(() => {
+    stateIndex = 0;
+    effectIndex = 0;
+    refIndex = 0;
     render(); // Your main render function
     isRenderScheduled = false; // Unlock for next time
-    stateIndex = 0; // Reset your hook index
   });
 }
 /**
@@ -104,17 +106,16 @@ export function useEffect(callback, dependencies) {
     console.error("useEffect second argument must be an array or undefined");
     return;
   }
-  const oldHook = effects[effectIndex];
+  const currentIndex = effectIndex;
+
+  const oldHook = effects[currentIndex];
 
   // 1. Check if dependencies changed
   // If no dependencies array is passed, it always changes.
-  let hasChanged = true;
-  if (oldHook && dependencies) {
-    // Compare every item in the dependency array
-    hasChanged = dependencies.some(
-      (dep, i) => !Object.is(dep, oldHook.deps[i])
-    );
-  }
+  const hasChanged = areDepsChanged(
+    oldHook ? oldHook.deps : undefined,
+    dependencies
+  );
 
   // 2. If dependencies changed, we need to run the effect
   if (hasChanged) {
@@ -134,10 +135,11 @@ export function useEffect(callback, dependencies) {
 
       // C. SAVE STATE:
       // Save the cleanup function and dependencies for the next render.
-      effects[effectIndex] = {
+      effects[currentIndex] = {
         deps: dependencies,
         cleanup: cleanupFunction, // <--- THIS is the "return" value
       };
+      console.log("qsdqs", effects, currentIndex);
     });
   }
 

@@ -15,8 +15,8 @@ export function map(playersRef, bomRef) {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    const width = window.innerWidth + 200;
-    const height = window.innerHeight + 200;
+    const width = 1160;
+    const height = 1160;
 
     if (!mapRef.current) return;
     function handleResize() {
@@ -88,6 +88,7 @@ export function map(playersRef, bomRef) {
       },
       ref: mapRef,
     },
+
     ...players.map((p, i) => {
       return jsx("div", {
         className: `player player${i}`,

@@ -47,6 +47,4 @@ export function render(App) {
 
   updateElement(root, newVDOM, oldVDOM); // diff & patch
   oldVDOM = newVDOM; // save for next render
-
-  clearhooks();
 }

@@ -147,6 +147,15 @@ function updateElementProps(el, newNode, oldNode) {
       } else if (key === "checked") {
         el.checked = false;
         el.removeAttribute(key);
+      } else if (key === "ref") {
+        if (
+          typeof oldNode.props.ref === "object" &&
+          oldNode.props.ref !== null
+        ) {
+          oldNode.props.ref.current = null;
+        } else if (typeof oldNode.props.ref === "function") {
+          oldNode.props.ref(null);
+        }
       } else {
         el.removeAttribute(key);
       }
@@ -171,6 +180,13 @@ function updateElementProps(el, newNode, oldNode) {
         el.addEventListener(key.slice(2).toLowerCase(), value);
       }
     } else if (key === "ref") {
+      if (oldValue) {
+        if (typeof oldValue === "object" && oldValue !== null) {
+          oldValue.current = null;
+        } else if (typeof oldValue === "function") {
+          oldValue(null);
+        }
+      }
       if (typeof value === "object" && value !== null) {
         value.current = el;
       } else if (typeof value === "function") {
@@ -238,8 +254,8 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
   }
 
   // If types differ, replace
-  if (newNode.type !== oldNode.type || typeof newNode !== typeof oldNode) {
-    if ("ref" in oldNode.props) {
+  if (newNode.type !== oldNode.type) {    
+    if (oldNode.props && "ref" in oldNode.props) {
       if (typeof oldNode.props.ref === "object" && oldNode.props.ref !== null) {
         oldNode.props.ref.current = null;
       } else if (typeof oldNode.props.ref === "function") {

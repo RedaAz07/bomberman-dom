@@ -18,22 +18,22 @@ body {
 }
 
 .map-wrapper {
+
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100vw;
   height: 100vh;
+  margin: 0 auto;
 }
+/* style.css - Find .map-container */
 .map-container {
-  box-sizing: content-box;
+  /* Add this line: */
 
-  position: relative;
-  max-width: 960px;
-  max-height: 960px;
-  /* 9 columns * 40px = 360px */
-  width: 100%;
-  /* 9 rows * 40px = 360px */
-  height: 100%;
+  box-sizing: content-box;
+  min-width: 960px;
+  min-height: 960px;
+
   object-fit: contain;
   background-color: #2e4e35;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -247,7 +247,6 @@ button {
   transition: all 0.2s ease;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   box-shadow: 0 4px 0 #2d5fa8, 0 6px 15px rgba(74, 158, 255, 0.3);
-  position: relative;
   top: 0;
 }
 
@@ -377,7 +376,6 @@ p[style*="color: red"],
 }
 
 .players-section {
-  position: relative;
   background: #1f2749;
   border: 3px solid #4a9eff;
   border-radius: 10px;
@@ -690,8 +688,11 @@ p[style*="color: red"],
   }
 }
 
+/* style.css - Find .player */
 .player {
-  position: absolute;
+  /* Change relative to absolute */
+  position: absolute; 
+
   width: 64px;
   height: 64px;
   z-index: 100;
@@ -715,7 +716,6 @@ p[style*="color: red"],
 
 .game-container {
   /* The wrapper fills the screen and centers the content */
-  position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
