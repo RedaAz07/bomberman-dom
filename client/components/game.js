@@ -13,8 +13,7 @@ export function game() {
     const height = 1500;
 
     function handleResize() {
-      const size = Math.min(window.innerWidth, window.innerHeight);
-      if (size >= 800) {
+      if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
         setScale(1);
         return;
       }
