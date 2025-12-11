@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "../framework/main.js";
+import { Store, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { map } from "./map.js";
@@ -76,7 +76,7 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
-    const id = store.get().players.findIndex((p) => p.username === ws.username)
+    const id = store.get().players.findIndex((p) => p.username === ws.username);
     const playerEl = playersRef[id].current;
     let lastTime = 0;
     let animationTimer = 0;
@@ -90,11 +90,12 @@ export function game() {
       const absX = baseX + newX;
       const absY = baseY + newY;
 
+      // Full square fit (62x62) to eliminate both horizontal and vertical sliding
       const hitBox = {
-        x: 0,
-        y: 14,
-        w: 48,
-        h: 48
+        x: 1,
+        y: 1,
+        w: 62,
+        h: 62,
       };
 
       const points = {
@@ -109,11 +110,15 @@ export function game() {
 
       for (const key in points) {
         const point = points[key];
-        const tileX = Math.floor(point.x / 50);
-        const tileY = Math.floor(point.y / 50);
+        const tileX = Math.floor(point.x / 64);
+        const tileY = Math.floor(point.y / 64);
 
         let isBlocked = false;
-        if (!mapData || !mapData[tileY] || mapData[tileY][tileX] === undefined) {
+        if (
+          !mapData ||
+          !mapData[tileY] ||
+          mapData[tileY][tileX] === undefined
+        ) {
           isBlocked = true;
         } else if (mapData[tileY][tileX] !== 0) {
           isBlocked = true;
@@ -125,9 +130,6 @@ export function game() {
       return { hasCollision, collisions };
     }
 
-
-
-
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "player-move") {
@@ -136,14 +138,14 @@ export function game() {
         if (username === ws.username) return;
 
         const players = store.get().players;
-        const index = players.findIndex(p => p.username === username);
+        const index = players.findIndex((p) => p.username === username);
         if (index === -1) return;
 
         const el = playersRef[index]?.current;
         if (!el) return;
 
-        el.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
       }
       if (data.type === "message") {
         setChat((prev) => [
@@ -152,8 +154,6 @@ export function game() {
         ]);
       }
     };
-
-
 
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
@@ -168,60 +168,80 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        playerEl.style.backgroundPosition = `-${frameX}px -${frameY}px`;
 
         // movement with deltaTime
         const moveDist = speed * delta;
 
         if (eventKey.current === "ArrowRight") {
-          const { hasCollision, collisions } = checkCollision(posX + moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX + moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX += moveDist;
           } else {
             if (collisions.tr && !collisions.br) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.br && !collisions.tr) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowLeft") {
-          const { hasCollision, collisions } = checkCollision(posX - moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX - moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX -= moveDist;
           } else {
             if (collisions.tl && !collisions.bl) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.bl && !collisions.tl) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowUp") {
-          const { hasCollision, collisions } = checkCollision(posX, posY - moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY - moveDist
+          );
           if (!hasCollision) {
             posY -= moveDist;
           } else {
             if (collisions.tl && !collisions.tr) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.tr && !collisions.tl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowDown") {
-          const { hasCollision, collisions } = checkCollision(posX, posY + moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY + moveDist
+          );
           if (!hasCollision) {
             posY += moveDist;
           } else {
             if (collisions.bl && !collisions.br) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.br && !collisions.bl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
-        playerEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+        playerEl.style.transform = `translate3d(${posX}px, ${posY - 25}px, 0)`;
         ws.send(
           JSON.stringify({
             type: "move",
@@ -230,7 +250,7 @@ export function game() {
             x: posX,
             y: posY,
             frameX: frameX,
-            frameY: frameY
+            frameY: frameY,
           })
         );
 

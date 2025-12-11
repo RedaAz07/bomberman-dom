@@ -14,16 +14,18 @@ body {
   align-items: center;
   min-height: 100vh;
   margin: 0;
+  overflow: hidden;
 }
 
-.game-container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+.map-wrapper {
+
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100vw;
+  height: 100vh;
+  margin: 0 auto;
 }
 
 .combine-chat-map {
@@ -38,17 +40,20 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 750px;
-  height: 750px;
+
+  box-sizing: content-box;
+  min-width: 960px;
+  min-height: 960px;
+
+  object-fit: contain;
   background-color: #2e4e35;
-  overflow: hidden;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .tile {
   position: absolute;
-  width: 50px;
-  height: 50px;
+  width: 64px;
+  height: 64px;
   background-size: cover;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -57,31 +62,28 @@ body {
 }
 
 .tile-grass {
-  background-image: url("../images/tile1.jpg");
-}
-
-.tile-braml {
-  background-image: url("../images/tile2.jpg");
-  will-change: transform;
-}
-
-.tile-stone {
-  background-image: url("../images/tile3.jpg");
-}
-
-.tile-wall-vertical {
-  background-image: url("../images/tile4.jpg");
-}
-
-.tile-wall-horizontal {
-  background-image: url("../images/tile5.jpg");
+  background-image: url("../images/1.png");
 }
 
 .tile-wall-corner {
-  background-image: url("../images/tile6.jpg");
+  background-image: url("../images/2.png");
 }
 
+.tile-wall-vertical {
+  background-image: url("../images/3.png");
+}
 
+.tile-wall-horizontal {
+  background-image: url("../images/3.png");
+}
+
+.tile-braml {
+  background-image: url("../images/4.png");
+}
+
+.tile-stone {
+  background-image: url("../images/5.png");
+}
 
 .container {
   max-width: 900px;
@@ -90,7 +92,8 @@ body {
   border: 4px solid #4a9eff;
   border-radius: 15px;
   padding: 30px;
-  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3), 0 0 40px rgba(74, 158, 255, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3), 0 0 40px rgba(74, 158, 255, 0.2),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
   animation: fadeIn 0.5s ease-in;
 }
 
@@ -183,8 +186,6 @@ h1 {
   text-shadow: 2px 2px 0 #1f2749, 4px 4px 10px rgba(74, 158, 255, 0.5);
 }
 
-
-
 h2 {
   font-size: 18px;
   color: #4a9eff;
@@ -238,7 +239,8 @@ input[type="text"] {
 input[type="text"]:focus {
   outline: none;
   border-color: #6eb4ff;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3), 0 0 15px rgba(74, 158, 255, 0.5);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(74, 158, 255, 0.5);
   transform: scale(1.02);
 }
 
@@ -258,7 +260,6 @@ button {
   transition: all 0.2s ease;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   box-shadow: 0 4px 0 #2d5fa8, 0 6px 15px rgba(74, 158, 255, 0.3);
-  position: relative;
   top: 0;
 }
 
@@ -350,7 +351,6 @@ p[style*="color: red"],
   margin-bottom: 10px;
 }
 
-
 .timer-label {
   font-size: 11px;
   color: #ff6b6b;
@@ -392,7 +392,6 @@ p[style*="color: red"],
 }
 
 .players-section {
-  position: relative;
   background: #1f2749;
   border: 3px solid #4a9eff;
   border-radius: 10px;
@@ -439,7 +438,6 @@ p[style*="color: red"],
   gap: 10px;
   transition: all 0.3s ease;
 }
-
 
 .player-item::before {
   content: "●";
@@ -719,14 +717,17 @@ p[style*="color: red"],
   }
 }
 
+/* style.css - Find .player */
 .player {
+  /* Change relative to absolute */
   position: absolute;
-  width: 50px;
+
+  width: 64px;
   height: 64px;
   z-index: 100;
-  background-position: -5px -13px;
   background-repeat: no-repeat;
   image-rendering: pixelated;
+  transform: translate3d(0px, -25px, 0px);
 }
 
 .player0 {
@@ -818,6 +819,16 @@ p[style*="color: red"],
     0 2px 8px rgba(0, 0, 0, 0.6),
     0 0 15px rgba(187, 110, 255, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.game-container {
+  /* The wrapper fills the screen and centers the content */
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
 }
 
 .bom {
