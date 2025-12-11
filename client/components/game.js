@@ -15,10 +15,13 @@ const tileClass = {
 
 export function game() {
   //! state for the map and players
+  const power = 2
+  const nbBombs = useRef(1)
   const bombElementsRef = useRef(createRefMap());
+  const explosionElementsRef = useRef(createRefMap());
 
+  const explosionsRef = useRef([]);
   const bombsRef = useRef([]);
-  const bombRef = useRef(null);
   const Map = store.get().map;
   const players = store.get().players;
   const [grid, setGrid] = useState(Map);
@@ -62,11 +65,11 @@ export function game() {
     }
     const pos = getLocalPosition(playerEl, mapRef.current);
 
-    const x = Math.floor((Math.round(pos.x / 50) * 50) / 50);
-    const y = Math.floor((Math.round((pos.y + 13) / 50) * 50) / 50);
+    const x = Math.round(pos.x / 50)
+    const y = Math.round((pos.y + 13) / 50);
     const bombId = `bomb-${Date.now()}`;
 
-
+    nbBombs.current -= 1;
     setGrid((prevGrid) => {
       const newGrid = prevGrid.map((row) => row.slice());
       const colIndex = x;
@@ -103,31 +106,15 @@ export function game() {
     );
 
     // Remove bomb after 3 seconds
-    setTimeout(() => {
-      // 1. remove bomb from state
-      bombsRef.current = bombsRef.current.filter(b => b.id !== bombId);
 
-      // 2. clear bomb from map grid
-      setGrid(prevGrid => {
-
-        const newGrid = prevGrid.map(row => row.slice());
-        const colIndex = x;
-        const rowIndex = y;
-        if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 5) {
-          newGrid[rowIndex][colIndex] = 0;
-        }
-        return newGrid;
-      });
-
-    }, 3000);
   }
   //! EVENT HANDLERS
   function handleKeyDown(e) {
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
     }
-    if (e.key === " ") {
-      spaceKey.current = true;
+    if (e.key === " " && !e.repeat && nbBombs.current > 0) {
+
       placeBomb();
     }
   }
@@ -145,18 +132,6 @@ export function game() {
   // SPRITE DATA
 
   useEffect(() => {
-
-    //! bomb
-
-    let colb = 0;
-    const colsbomb = 5;
-    const rowsbomb = 1;
-    let bombFrameIndex = 0;
-    let animationTimerbomb = 0;
-    let animationSpeedbomb = 300
-    const frameWidthbomb = 50;
-    const frameHeightbomb = 50;
-    const bombFrames = { bomb: { row: 0, col: [0, 1, 2, 3, 4] } }
     //! setup the players 
     if (!mapRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -254,36 +229,117 @@ export function game() {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
 
+      //! BOMB ANIMATION AND EXPLOSION HANDLING
+
+      const bombsToDelete = bombsRef.current.filter(b => timeStamp - b.creationTime > 3000);
+
+      if (bombsToDelete.length > 0) {
+        bombsRef.current = bombsRef.current.filter(b => timeStamp - b.creationTime <= 3000);
+        setGrid(prevGrid => {
+          const newGrid = prevGrid.map(row => row.slice());
+          let hasChanges = false;
 
 
-      /*  if (bombRef.current) {
-         const maxFrames = bombFrames.bomb.col.length;
-         if (bombFrameIndex >= maxFrames) {
-           bombFrameIndex = 0;
-         } else {
-           const col = bombFrameIndex;
-           const frameX = col * frameWidthbomb;
-           bombRef.current.style.backgroundPosition = `-${frameX}px`;
-         }
-         animationTimerbomb += delta;
-         if (animationTimerbomb > animationSpeedbomb) {
-           animationTimerbomb = 0;
-           bombFrameIndex++
-         }
-       } */
+          bombsToDelete.forEach(bomb => {
+            const range = power || 1; 
 
-    bombsRef.current.forEach((bomb) => {
-  const key = `${bomb.y}-${bomb.x}`;
-  const bombEl = bombElementsRef.current.get(key);
+            const createExplosion = (tx, ty) => {
+              if (!newGrid[ty] || newGrid[ty][tx] === undefined) return false; // Stop
 
-  if (bombEl) {
-    const age = timeStamp - bomb.creationTime;  // age = ms passed
-    const currentFrame = Math.floor(age / 300) % 5;
-    const frameX = currentFrame * 50;
+              const cell = newGrid[ty][tx];
 
-    bombEl.style.backgroundPosition = `-${frameX}px`;
-  }
-});
+              if (cell === 1 || cell === 3 || cell === 4) return false;
+
+              if (cell === 2) {
+                newGrid[ty][tx] = 6;
+                hasChanges = true;
+                explosionsRef.current.push({ x: tx, y: ty, creationTime: timeStamp });
+                return false; 
+              }
+
+              newGrid[ty][tx] = 6;
+              hasChanges = true;
+              explosionsRef.current.push({ x: tx, y: ty, creationTime: timeStamp });
+              return true;
+            };
+
+
+            createExplosion(bomb.x, bomb.y);
+
+            const directions = [
+              { dx: 0, dy: -1 }, // Up
+              { dx: 0, dy: 1 },  // Down
+              { dx: -1, dy: 0 }, // Left
+              { dx: 1, dy: 0 }   // Right
+            ];
+
+            directions.forEach(dir => {
+              for (let i = 1; i <= range; i++) {
+                const currentX = bomb.x + (dir.dx * i);
+                const currentY = bomb.y + (dir.dy * i);
+
+                const shouldContinue = createExplosion(currentX, currentY);
+                if (!shouldContinue) break;
+              }
+            });
+          });
+
+          return hasChanges ? newGrid : prevGrid;
+        });
+      }
+
+
+      explosionsRef.current.forEach((exp) => {
+        const key = `${exp.y}-${exp.x}`;
+        const explosion = explosionElementsRef.current.get(key);
+
+        if (explosion) {
+          const age = timeStamp - exp.creationTime;
+
+          const currentFrame = Math.floor(age / 100) % 5;
+          const frameX = currentFrame * 50;
+
+          explosion.style.backgroundPosition = `-${frameX}px -150px`;
+        }
+      });
+
+
+      const explosionsToDelete = explosionsRef.current.filter(e => timeStamp - e.creationTime > 500); // Fire lasts 500ms
+
+      if (explosionsToDelete.length > 0) {
+        // A. Update Logic: Remove expired fire from ref
+        explosionsRef.current = explosionsRef.current.filter(e => timeStamp - e.creationTime <= 500);
+        nbBombs.current += 1;
+        // B. Update Visuals: Set grid back to Grass (0)
+        setGrid(prevGrid => {
+          const newGrid = prevGrid.map(row => row.slice());
+          let hasChanges = false;
+
+          explosionsToDelete.forEach(exp => {
+            if (newGrid[exp.y] && newGrid[exp.y][exp.x] === 6) {
+              newGrid[exp.y][exp.x] = 0;
+              mapData[exp.y][exp.x] = 0;
+              hasChanges = true;
+            }
+          });
+
+          return hasChanges ? newGrid : prevGrid;
+        });
+      }
+
+      //! Update bomb animations
+      bombsRef.current.forEach((bomb) => {
+        const key = `${bomb.y}-${bomb.x}`;
+        const bombEl = bombElementsRef.current.get(key);
+
+        if (bombEl) {
+          const age = timeStamp - bomb.creationTime;
+          const currentFrame = Math.floor(age / 800) % 4;
+          const frameX = currentFrame * 50;
+
+          bombEl.style.backgroundPosition = `-${frameX}px`;
+        }
+      });
 
 
 
@@ -400,20 +456,19 @@ export function game() {
           "div",
           { className: "map-row" },
           ...row.map((cell, colIndex) =>
-
-            cell === 5
+            cell === 6
               ? [jsx("div", {
-                className: "tile-bomb",
+                className: "tile tile-explosion", // Add CSS for this!
                 style: getTileStyle(rowIndex, colIndex, cell),
-                key: `${rowIndex}-${colIndex}-bomb`,
+                key: `exp-${rowIndex}-${colIndex}`, // Stable Key
                 ref: (el) => {
                   const key = `${rowIndex}-${colIndex}`;
                   if (el) {
                     // Element created: Add to registry
-                    bombElementsRef.current.set(key, el);
+                    explosionElementsRef.current.set(key, el);
                   } else {
                     // Element removed: Delete from registry
-                    bombElementsRef.current.delete(key);
+                    explosionElementsRef.current.delete(key);
                   }
                 },
               }), jsx("div", {
@@ -421,37 +476,61 @@ export function game() {
                 style: getTileStyle(rowIndex, colIndex, cell),
                 "data-row": rowIndex,
                 "data-col": colIndex,
-                key: `${crypto.randomUUID()}`,
+                key: `${`grass-${rowIndex}-${colIndex}`}`,
 
               })]
               :
-              cell === 2
-                ? [
-                  jsx("div", {
-                    className: "tile tile-grass",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${crypto.randomUUID()}`,
+              cell === 5
+                ? [jsx("div", {
+                  className: "tile-bomb",
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  key: `${rowIndex}-${colIndex}-bomb`,
+                  ref: (el) => {
+                    const key = `${rowIndex}-${colIndex}`;
+                    if (el) {
+                      // Element created: Add to registry
+                      bombElementsRef.current.set(key, el);
+                    } else {
+                      // Element removed: Delete from registry
+                      bombElementsRef.current.delete(key);
+                    }
+                  },
+                }), jsx("div", {
+                  className: "tile tile-grass",
+                  style: getTileStyle(rowIndex, colIndex, cell),
+                  "data-row": rowIndex,
+                  "data-col": colIndex,
+                  key: `${`grass-${rowIndex}-${colIndex}`}`,
 
-                  }),
-                  jsx("div", {
+                })]
+                :
+                cell === 2
+                  ? [
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+
+                    }),
+                    jsx("div", {
+                      className: tileClass[cell],
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`braml-${rowIndex}-${colIndex}`}`,
+
+                    }),
+                  ]
+                  : jsx("div", {
                     className: tileClass[cell],
                     style: getTileStyle(rowIndex, colIndex, cell),
                     "data-row": rowIndex,
                     "data-col": colIndex,
-                    key: `${crypto.randomUUID()}`,
+                    key: `${`tile-${rowIndex}-${colIndex}`}`,
 
-                  }),
-                ]
-                : jsx("div", {
-                  className: tileClass[cell],
-                  style: getTileStyle(rowIndex, colIndex, cell),
-                  "data-row": rowIndex,
-                  "data-col": colIndex,
-                  key: `${crypto.randomUUID()}`,
-
-                })
+                  })
           )
         )
       )

@@ -28,3 +28,37 @@ export function createRefMap() {
     }
   };
 }
+
+
+
+
+
+export function createObjectMap() {
+  const obj = {};
+
+  return {
+    set(key, value) {
+      obj[key] = value;
+    },
+
+    get(key) {
+      return obj[key];
+    },
+
+    delete(key) {
+      delete obj[key];
+    },
+
+    has(key) {
+      return Object.prototype.hasOwnProperty.call(obj, key);
+    },
+
+    clear() {
+      for (const k in obj) delete obj[k];
+    },
+
+    entries() {
+      return Object.entries(obj);
+    }
+  };
+}
