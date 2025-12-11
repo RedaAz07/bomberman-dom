@@ -9,10 +9,15 @@ export function game() {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    const width = 1100;
-    const height = 1100;
+    const width = 1500;
+    const height = 1500;
 
     function handleResize() {
+      const size = Math.min(window.innerWidth, window.innerHeight);
+      if (size >= 800) {
+        setScale(1);
+        return;
+      }
       const widthScale = window.innerWidth / width;
       const heightScale = window.innerHeight / height;
       const newScale = Math.min(widthScale, heightScale);
@@ -22,7 +27,7 @@ export function game() {
     window.addEventListener("resize", handleResize);
   }, []);
   const [chat, setChat] = useState([]);
-  const [msg, setMsg] = useState("")
+  const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
   const [bombs, setBombs] = useState(3);
   const [bombRange, setBombRange] = useState(4);
@@ -31,7 +36,7 @@ export function game() {
   const bomRef = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const mapData = store.get().collisionMap;
-  const playersAlive = store.get().players.length
+  const playersAlive = store.get().players.length;
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -74,7 +79,7 @@ export function game() {
     let obj = {
       min: 0,
       sec: 0,
-      text: "00:00"
+      text: "00:00",
     };
 
     setInterval(() => {
@@ -85,9 +90,13 @@ export function game() {
         obj.sec = 0;
       }
 
-      setTimer(String(obj.min).padStart(2, "0") + ":" + String(obj.sec).padStart(2, "0"));
+      setTimer(
+        String(obj.min).padStart(2, "0") +
+          ":" +
+          String(obj.sec).padStart(2, "0")
+      );
     }, 1000);
-  }, [])
+  }, []);
   // SPRITE DATA
 
   useEffect(() => {
@@ -283,12 +292,11 @@ export function game() {
 
   console.log(playersAlive);
 
-
   return jsx(
     "div",
     {
       className: "game-container",
-       style: {
+      style: {
         // Apply the scale
         transform: `scale(${scale})`,
         // Ensure scaling happens from the center
@@ -301,21 +309,34 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx("div", { className: "game-hud-container" },
+    jsx(
+      "div",
+      { className: "game-hud-container" },
 
-
-      jsx("div", { className: "hud-section player-info" },
+      jsx(
+        "div",
+        { className: "hud-section player-info" },
         jsx("div", { className: "hud-label" }, "PLAYER"),
         jsx("div", { className: "hud-value player-name" }, ws.username)
       ),
-      jsx("div", { className: "hud-bottom" },
+      jsx(
+        "div",
+        { className: "hud-bottom" },
 
-        jsx("div", { className: "hud-stat lives-stat" },
+        jsx(
+          "div",
+          { className: "hud-stat lives-stat" },
           jsx("div", { className: "stat-icon" }, "❤️"),
-          jsx("div", { className: "stat-info" },
+          jsx(
+            "div",
+            { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "LIVES"),
-            jsx("div", { className: "stat-value" },
-              jsx("div", { className: "hearts-container" },
+            jsx(
+              "div",
+              { className: "stat-value" },
+              jsx(
+                "div",
+                { className: "hearts-container" },
                 ...Array.from({ length: lives || 3 }, (_, i) =>
                   jsx("span", { className: "heart", key: i }, "❤️")
                 )
@@ -324,62 +345,95 @@ export function game() {
           )
         ),
 
-        jsx("div", { className: "hud-stat bombs-stat" },
+        jsx(
+          "div",
+          { className: "hud-stat bombs-stat" },
           jsx("div", { className: "stat-icon" }, "💣"),
-          jsx("div", { className: "stat-info" },
+          jsx(
+            "div",
+            { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "BOMBS"),
             jsx("div", { className: "stat-value bombs-count" }, bombs || 1)
           )
         ),
 
-        jsx("div", { className: "hud-stat range-stat" },
+        jsx(
+          "div",
+          { className: "hud-stat range-stat" },
           jsx("div", { className: "stat-icon" }, "💥"),
-          jsx("div", { className: "stat-info" },
+          jsx(
+            "div",
+            { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "RANGE"),
             jsx("div", { className: "stat-value" }, bombRange || 1)
           )
         ),
 
-        jsx("div", { className: "hud-stat players-stat" },
+        jsx(
+          "div",
+          { className: "hud-stat players-stat" },
           jsx("div", { className: "stat-icon" }, "👥"),
-          jsx("div", { className: "stat-info" },
+          jsx(
+            "div",
+            { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "ALIVE"),
             jsx("div", { className: "stat-value" }, playersAlive || 1)
           )
         )
       ),
-      jsx("div", { className: "hud-section1" },
+      jsx(
+        "div",
+        { className: "hud-section1" },
         jsx("div", { className: "timer-icon" }, "⏱️"),
-        jsx("div", { className: "timer-display" },
-          jsx("div", { className: "timer-value1" }, Timer),
+        jsx(
+          "div",
+          { className: "timer-display" },
+          jsx("div", { className: "timer-value1" }, Timer)
         )
-      ),
-
+      )
     ),
-    jsx("div", { className: "combine-chat-map" },
+    jsx(
+      "div",
+      { className: "combine-chat-map" },
       map(playersRef, bomRef),
-      jsx("div", { className: "chat-section-game" },
+      jsx(
+        "div",
+        { className: "chat-section-game" },
         jsx("h3", null, "Game Chat"),
-        jsx("div", { className: "chat-messages" },
+        jsx(
+          "div",
+          { className: "chat-messages" },
           ...chat.map((c) =>
-            jsx("div", { className: "chat-message" },
+            jsx(
+              "div",
+              { className: "chat-message" },
               jsx("span", { className: "username" }, c.username + ": "),
               jsx("span", null, c.msg)
             )
           )
         ),
 
-        jsx("div", { className: "chat-input-container" },
+        jsx(
+          "div",
+          { className: "chat-input-container" },
           jsx("input", {
             type: "text",
             value: msg,
             placeholder: "Type your message...",
             oninput: (e) => setMsg(e.target.value),
-            onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
+            onkeypress: (e) => e.key === "Enter" && sendMsg(e),
           }),
-          jsx("button", {
-            onclick: (e) => { sendMsg(e) }
-          }, "Send")
+          jsx(
+            "button",
+            {
+              onclick: (e) => {
+                sendMsg(e);
+              },
+            },
+            "Send"
+          )
         )
-      )));
+      )
+    )
+  );
 }
