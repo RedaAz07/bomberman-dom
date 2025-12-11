@@ -85,12 +85,15 @@ function reconcileChildren(parent, newChildren, oldChildren) {
     if (!newKeyed.has(key) && !processedIndices.has(index)) {
       const domNode = domNodes[index];
       if (domNode && domNode.parentNode === parent) {
-        if (
-          "ref" in oldChildren[index].props &&
-          typeof oldChildren[index].props.ref === "object" &&
-          oldChildren[index].props.ref !== null
-        ) {
-          oldChildren[index].props.ref.current = null;
+        if ("ref" in oldChildren[index].props) {
+          if (
+            typeof oldChildren[index].props.ref === "object" &&
+            oldChildren[index].props.ref !== null
+          ) {
+            oldChildren[index].props.ref.current = null;
+          } else if (typeof oldChildren[index].props.ref === "function") {
+            oldChildren[index].props.ref(null);
+          }
         }
         parent.removeChild(domNode);
       }
@@ -105,12 +108,15 @@ function reconcileChildren(parent, newChildren, oldChildren) {
         oldChild && typeof oldChild === "object" && oldChild.props?.key != null;
 
       if (!hasKey && parent.childNodes[i]) {
-        if (
-          "ref" in oldChild.props &&
-          typeof oldChild.props.ref === "object" &&
-          oldChild.props.ref !== null
-        ) {
-          oldChild.props.ref.current = null;
+        if ("ref" in oldChild.props) {
+          if (
+            typeof oldChild.props.ref === "object" &&
+            oldChild.props.ref !== null
+          ) {
+            oldChild.props.ref.current = null;
+          } else if (typeof oldChild.props.ref === "function") {
+            oldChild.props.ref(null);
+          }
         }
         parent.removeChild(parent.childNodes[i]);
       }
@@ -141,6 +147,15 @@ function updateElementProps(el, newNode, oldNode) {
       } else if (key === "checked") {
         el.checked = false;
         el.removeAttribute(key);
+      } else if (key === "ref") {
+        if (
+          typeof oldNode.props.ref === "object" &&
+          oldNode.props.ref !== null
+        ) {
+          oldNode.props.ref.current = null;
+        } else if (typeof oldNode.props.ref === "function") {
+          oldNode.props.ref(null);
+        }
       } else {
         el.removeAttribute(key);
       }
@@ -164,8 +179,19 @@ function updateElementProps(el, newNode, oldNode) {
       if (value) {
         el.addEventListener(key.slice(2).toLowerCase(), value);
       }
-    } else if (key === "ref" && typeof value === "object" && value !== null) {
-      value.current = el;
+    } else if (key === "ref") {
+      if (oldValue) {
+        if (typeof oldValue === "object" && oldValue !== null) {
+          oldValue.current = null;
+        } else if (typeof oldValue === "function") {
+          oldValue(null);
+        }
+      }
+      if (typeof value === "object" && value !== null) {
+        value.current = el;
+      } else if (typeof value === "function") {
+        value(el);
+      }
     } else if (key === "className") {
       el.className = value;
     } else if (key === "id") {
@@ -174,7 +200,6 @@ function updateElementProps(el, newNode, oldNode) {
       setTimeout(() => {
         el.focus();
         if (el.DOCUMENT_TYPE_NODE === "input") {
-
           const len = el.value?.length || 0;
           el.setSelectionRange(len, len);
         }
@@ -217,25 +242,25 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
 
   // If newNode doesn't exist, remove old DOM
   if (!newNode) {
-    if (
-      "ref" in oldNode.props &&
-      typeof oldNode.props.ref === "object" &&
-      oldNode.props.ref !== null
-    ) {
-      oldNode.props.ref.current = null;
+    if ("ref" in oldNode.props) {
+      if (typeof oldNode.props.ref === "object" && oldNode.props.ref !== null) {
+        oldNode.props.ref.current = null;
+      } else if (typeof oldNode.props.ref === "function") {
+        oldNode.props.ref(null);
+      }
     }
     parent.removeChild(parent.childNodes[index]);
     return;
   }
 
   // If types differ, replace
-  if (newNode.type !== oldNode.type || typeof newNode !== typeof oldNode) {
-    if (
-      "ref" in oldNode.props &&
-      typeof oldNode.props.ref === "object" &&
-      oldNode.props.ref !== null
-    ) {
-      oldNode.props.ref.current = null;
+  if (newNode.type !== oldNode.type) {    
+    if (oldNode.props && "ref" in oldNode.props) {
+      if (typeof oldNode.props.ref === "object" && oldNode.props.ref !== null) {
+        oldNode.props.ref.current = null;
+      } else if (typeof oldNode.props.ref === "function") {
+        oldNode.props.ref(null);
+      }
     }
     parent.replaceChild(createElement(newNode), parent.childNodes[index]);
     return;

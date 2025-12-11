@@ -4,7 +4,6 @@ let states = [];
 let stateIndex = 0;
 let effects = [];
 let effectIndex = 0;
-export let pindingEffects = [];
 let refs = [];
 let refIndex = 0;
 let isRenderScheduled = false;
@@ -20,9 +19,11 @@ export function scheduleRender() {
   // This runs immediately after your current function finishes,
   // but BEFORE the browser repaints.
   queueMicrotask(() => {
+    stateIndex = 0;
+    effectIndex = 0;
+    refIndex = 0;
     render(); // Your main render function
     isRenderScheduled = false; // Unlock for next time
-    stateIndex = 0; // Reset your hook index
   });
 }
 /**
@@ -36,12 +37,17 @@ export function clearhooks() {
   stateIndex = 0;
   effectIndex = 0;
   refIndex = 0;
-  pindingEffects = [];
 }
 
 export function clearStates() {
   states = [];
   refs = [];
+  effects.forEach((hook) => {
+    // If this hook has a cleanup function saved, run it!
+    if (hook && hook.cleanup) {
+      hook.cleanup();
+    }
+  });
   effects = [];
   clearhooks();
 }
@@ -100,16 +106,43 @@ export function useEffect(callback, dependencies) {
     console.error("useEffect second argument must be an array or undefined");
     return;
   }
-  const oldDependencies = effects[effectIndex];
-  const hasChanged = areDepsChanged(oldDependencies, dependencies);
+  const currentIndex = effectIndex;
 
+  const oldHook = effects[currentIndex];
+
+  // 1. Check if dependencies changed
+  // If no dependencies array is passed, it always changes.
+  const hasChanged = areDepsChanged(
+    oldHook ? oldHook.deps : undefined,
+    dependencies
+  );
+
+  // 2. If dependencies changed, we need to run the effect
   if (hasChanged) {
-    // console.log("effects", effects);
+    // MICROTASK QUEUE:
+    // We shouldn't run effects immediately during render!
+    // We queue them to run AFTER the UI is updated.
+    queueMicrotask(() => {
+      // A. CLEANUP PHASE:
+      // If there was a previous effect, run its cleanup function first.
+      if (oldHook && oldHook.cleanup) {
+        oldHook.cleanup();
+      }
 
-    pindingEffects.push(callback);
+      // B. EXECUTION PHASE:
+      // Run the effect and save the "return" value as the new cleanup.
+      const cleanupFunction = callback();
+
+      // C. SAVE STATE:
+      // Save the cleanup function and dependencies for the next render.
+      effects[currentIndex] = {
+        deps: dependencies,
+        cleanup: cleanupFunction, // <--- THIS is the "return" value
+      };
+      console.log("qsdqs", effects, currentIndex);
+    });
   }
 
-  effects[effectIndex] = dependencies;
   effectIndex++;
 }
 

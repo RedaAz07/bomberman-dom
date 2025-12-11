@@ -3,7 +3,7 @@ import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
-
+import { createRefMap } from "../utils/proxy.js";
 const tileClass = {
   0: "tile tile-grass", // ard 
   1: "tile tile-wall-vertical", //  hiit
@@ -15,6 +15,8 @@ const tileClass = {
 
 export function game() {
   //! state for the map and players
+  const bombElementsRef = useRef(createRefMap());
+
   const bombsRef = useRef([]);
   const bombRef = useRef(null);
   const Map = store.get().map;
@@ -87,7 +89,7 @@ export function game() {
       }
     }
 
-    const newBomb = { id: bombId, x, y };
+    const newBomb = { id: bombId, x, y, creationTime: performance.now() };
     bombsRef.current = [...bombsRef.current, newBomb];
 
 
@@ -254,21 +256,36 @@ export function game() {
 
 
 
-      if (bombRef.current) {
-        const maxFrames = bombFrames.bomb.col.length;
-        if (bombFrameIndex >= maxFrames) {
-          bombFrameIndex = 0;
-        } else {
-          const col = bombFrameIndex;
-          const frameX = col * frameWidthbomb;
-          bombRef.current.style.backgroundPosition = `-${frameX}px`;
-        }
-        animationTimerbomb += delta;
-        if (animationTimerbomb > animationSpeedbomb) {
-          animationTimerbomb = 0;
-          bombFrameIndex++
-        }
-      }
+      /*  if (bombRef.current) {
+         const maxFrames = bombFrames.bomb.col.length;
+         if (bombFrameIndex >= maxFrames) {
+           bombFrameIndex = 0;
+         } else {
+           const col = bombFrameIndex;
+           const frameX = col * frameWidthbomb;
+           bombRef.current.style.backgroundPosition = `-${frameX}px`;
+         }
+         animationTimerbomb += delta;
+         if (animationTimerbomb > animationSpeedbomb) {
+           animationTimerbomb = 0;
+           bombFrameIndex++
+         }
+       } */
+
+    bombsRef.current.forEach((bomb) => {
+  const key = `${bomb.y}-${bomb.x}`;
+  const bombEl = bombElementsRef.current.get(key);
+
+  if (bombEl) {
+    const age = timeStamp - bomb.creationTime;  // age = ms passed
+    const currentFrame = Math.floor(age / 300) % 5;
+    const frameX = currentFrame * 50;
+
+    bombEl.style.backgroundPosition = `-${frameX}px`;
+  }
+});
+
+
 
 
       if (eventKey.current) {
@@ -388,8 +405,17 @@ export function game() {
               ? [jsx("div", {
                 className: "tile-bomb",
                 style: getTileStyle(rowIndex, colIndex, cell),
-                key: `${crypto.randomUUID()}`,
-                ref: bombRef,
+                key: `${rowIndex}-${colIndex}-bomb`,
+                ref: (el) => {
+                  const key = `${rowIndex}-${colIndex}`;
+                  if (el) {
+                    // Element created: Add to registry
+                    bombElementsRef.current.set(key, el);
+                  } else {
+                    // Element removed: Delete from registry
+                    bombElementsRef.current.delete(key);
+                  }
+                },
               }), jsx("div", {
                 className: "tile tile-grass",
                 style: getTileStyle(rowIndex, colIndex, cell),
