@@ -6,6 +6,21 @@ import { ws } from "../assets/js/ws.js";
 console.log(ws, "websoket");
 
 export function game() {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const width = 1100;
+    const height = 1100;
+
+    function handleResize() {
+      const widthScale = window.innerWidth / width;
+      const heightScale = window.innerHeight / height;
+      const newScale = Math.min(widthScale, heightScale);
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+  }, []);
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("")
   const [lives, setLives] = useState(3);
@@ -94,8 +109,8 @@ export function game() {
       const hitBox = {
         x: 1,
         y: 1,
-        w: 62,
-        h: 62,
+        w: 48,
+        h: 48,
       };
 
       const points = {
@@ -110,8 +125,8 @@ export function game() {
 
       for (const key in points) {
         const point = points[key];
-        const tileX = Math.floor(point.x / 64);
-        const tileY = Math.floor(point.y / 64);
+        const tileX = Math.floor(point.x / 50);
+        const tileY = Math.floor(point.y / 50);
 
         let isBlocked = false;
         if (
@@ -267,12 +282,20 @@ export function game() {
   }, []);
 
   console.log(playersAlive);
-  
+
 
   return jsx(
     "div",
     {
       className: "game-container",
+       style: {
+        // Apply the scale
+        transform: `scale(${scale})`,
+        // Ensure scaling happens from the center
+        transformOrigin: "center center",
+        // CRITICAL: Keep pixel art sharp
+        imageRendering: "pixelated",
+      },
       onKeydown: handleKeyDown,
       onKeyup: handleKeyUp,
       autoFocus: true,
@@ -334,7 +357,7 @@ export function game() {
 
     ),
     jsx("div", { className: "combine-chat-map" },
-      jsx("div", null, map(playersRef, bomRef)),
+      map(playersRef, bomRef),
       jsx("div", { className: "chat-section-game" },
         jsx("h3", null, "Game Chat"),
         jsx("div", { className: "chat-messages" },

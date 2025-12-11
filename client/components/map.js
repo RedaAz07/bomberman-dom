@@ -13,22 +13,7 @@ const tileClass = {
 
 export function map(playersRef, bomRef) {
   const mapRef = useRef(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const width = 1160;
-    const height = 1160;
-
-    if (!mapRef.current) return;
-    function handleResize() {
-      const widthScale = window.innerWidth / width;
-      const heightScale = window.innerHeight / height;
-      const newScale = Math.min(widthScale, heightScale);
-      setScale(newScale);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-  }, []);
+  
   const [playerPosition, setPlayerPosition] = useState({
     0: { top: "0px", left: "0px" },
     1: { top: "0px", left: "0px" },
@@ -79,14 +64,7 @@ export function map(playersRef, bomRef) {
     "div",
     {
       className: "map-container",
-      style: {
-        // Apply the scale
-        transform: `scale(${scale})`,
-        // Ensure scaling happens from the center
-        transformOrigin: "center center",
-        // CRITICAL: Keep pixel art sharp
-        imageRendering: "pixelated",
-      },
+     
       ref: mapRef,
     },
 

@@ -1,4 +1,4 @@
-const TILE_SIZE = 64;
+const TILE_SIZE = 50;
 const ROWS = 15;
 const COLS = 15;
 // Example function to determine style based on position and tile type
