@@ -17,13 +17,12 @@ function createRoom() {
     players: [],
     map,
     collisionMap,
-    timer: null,
-    timeLeft: null,
     disponible: true,
   };
   rooms.push(room);
   return room;
 }
+
 
 
 function findOrCreateRoom() {
@@ -43,13 +42,13 @@ function broadcastRoom(room, obj) {
 }
 
 function startGameTimer(room) {
- // if (room.players.length <= 1) return;
+  // if (room.players.length <= 1) return;
 
- /*  if (room.players.length === 2) room.timeLeft = 1;
-  if (room.players.length === 4) room.timeLeft = 10;
+  // if (room.players.length === 2) room.timeLeft = 10;
+  // if (room.players.length === 4) room.timeLeft = 10;
 
-  if (room.timer) clearInterval(room.timer);
- */
+  // if (room.timer) clearInterval(room.timer);
+  room.timeLeft = 2
   room.timer = setInterval(() => {
     room.timeLeft--;
     // if (room.timeLeft <= 10) {
@@ -193,7 +192,6 @@ wss.on("connection", (socket) => {
     }
 
     if (data.type === "move") {
-      
       const room = rooms.find((r) => r.id === data.roomId)
       broadcastRoom(room, {
         type: "player-move",

@@ -34,10 +34,36 @@ export function game() {
   });
   //! STATE AND REFS
   const eventKey = useRef(null);
-  const spaceKey = useRef(false);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const mapData = store.get().collisionMap;
   //! ANIMATION VARIABLES
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const width = 1500;
+    const height = 1500;
+
+    function handleResize() {
+      if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
+        setScale(1);
+        return;
+      }
+      const widthScale = window.innerWidth / width;
+      const heightScale = window.innerHeight / height;
+      const newScale = Math.min(widthScale, heightScale);
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+  }, []);
+  const [chat, setChat] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [lives, setLives] = useState(3);
+  const [bombs, setBombs] = useState(3);
+  const [bombRange, setBombRange] = useState(4);
+  const [Timer, setTimer] = useState("00:00");
+
+  const playersAlive = store.get().players.length;
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -48,6 +74,20 @@ export function game() {
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
 
+  const sendMsg = (e) => {
+    if (!msg.trim() || msg.trim().length > 30) return;
+    console.log("dkhl");
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        msg,
+      })
+    );
+
+    setMsg("");
+    e.target.value = "";
+    e.target.previousSibling.value = "";
+  };
   //! BOMB PLACEMENT
   function placeBomb() {
     const id = store.get().players.findIndex((p) => p.username === ws.username)
@@ -129,6 +169,28 @@ export function game() {
     }
   }
 
+  useEffect(() => {
+    let obj = {
+      min: 0,
+      sec: 0,
+      text: "00:00",
+    };
+
+    setInterval(() => {
+      obj.sec++;
+
+      if (obj.sec === 60) {
+        obj.min++;
+        obj.sec = 0;
+      }
+
+      setTimer(
+        String(obj.min).padStart(2, "0") +
+        ":" +
+        String(obj.sec).padStart(2, "0")
+      );
+    }, 1000);
+  }, []);
   // SPRITE DATA
 
   useEffect(() => {
@@ -141,16 +203,16 @@ export function game() {
       const height = entry.contentRect.height;
       if (width > 0 && height > 0) {
         setPlayerPosition({
-          0: { top: "37px", left: "50px" },
-          1: { top: "37px", left: `${width - 100}px` },
-          2: { top: `${height - 114}px`, left: `${width - 100}px` },
-          3: { top: `${height - 114}px`, left: "50px" },
+          0: { top: "64px", left: "64px" },
+          1: { top: "64px", left: `${width - 128}px` },
+          2: { top: `${height - 128}px`, left: `${width - 128}px` },
+          3: { top: `${height - 128}px`, left: "64px" },
         });
       }
     });
     observer.observe(mapRef.current);
     //! WEBSOCKET SETUP
-    const id = store.get().players.findIndex((p) => p.username === ws.username)
+    const id = store.get().players.findIndex((p) => p.username === ws.username);
     const playerEl = playersRef[id].current;
     //! ANIMATION LOOP
     let lastTime = 0;
@@ -166,11 +228,12 @@ export function game() {
       const absX = baseX + newX;
       const absY = baseY + newY;
 
+      // Full square fit (62x62) to eliminate both horizontal and vertical sliding
       const hitBox = {
-        x: 0,
-        y: 14,
+        x: 1,
+        y: 1,
         w: 48,
-        h: 48
+        h: 48,
       };
 
       const points = {
@@ -189,7 +252,11 @@ export function game() {
         const tileY = Math.floor(point.y / 50);
 
         let isBlocked = false;
-        if (!mapData || !mapData[tileY] || mapData[tileY][tileX] === undefined) {
+        if (
+          !mapData ||
+          !mapData[tileY] ||
+          mapData[tileY][tileX] === undefined
+        ) {
           isBlocked = true;
         } else if (mapData[tileY][tileX] !== 0) {
           isBlocked = true;
@@ -212,19 +279,23 @@ export function game() {
         if (username === ws.username) return;
 
         const players = store.get().players;
-        const index = players.findIndex(p => p.username === username);
+        const index = players.findIndex((p) => p.username === username);
         if (index === -1) return;
 
         const el = playersRef[index]?.current;
         if (!el) return;
 
         el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
+      }
+      if (data.type === "message") {
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
       }
     };
 
-
-    //! ANIMATION LOOP FUNCTION
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
@@ -241,7 +312,7 @@ export function game() {
 
 
           bombsToDelete.forEach(bomb => {
-            const range = power || 1; 
+            const range = power || 1;
 
             const createExplosion = (tx, ty) => {
               if (!newGrid[ty] || newGrid[ty][tx] === undefined) return false; // Stop
@@ -254,7 +325,7 @@ export function game() {
                 newGrid[ty][tx] = 6;
                 hasChanges = true;
                 explosionsRef.current.push({ x: tx, y: ty, creationTime: timeStamp });
-                return false; 
+                return false;
               }
 
               newGrid[ty][tx] = 6;
@@ -353,60 +424,80 @@ export function game() {
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
 
-        playerEl.style.backgroundPosition = `-${frameX + 5}px -${frameY + 13}px`;
+        playerEl.style.backgroundPosition = `-${frameX}px -${frameY}px`;
 
         // movement with deltaTime
         const moveDist = speed * delta;
 
         if (eventKey.current === "ArrowRight") {
-          const { hasCollision, collisions } = checkCollision(posX + moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX + moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX += moveDist;
           } else {
             if (collisions.tr && !collisions.br) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.br && !collisions.tr) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowLeft") {
-          const { hasCollision, collisions } = checkCollision(posX - moveDist, posY);
+          const { hasCollision, collisions } = checkCollision(
+            posX - moveDist,
+            posY
+          );
           if (!hasCollision) {
             posX -= moveDist;
           } else {
             if (collisions.tl && !collisions.bl) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision) posY += moveDist;
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
             } else if (collisions.bl && !collisions.tl) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision) posY -= moveDist;
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowUp") {
-          const { hasCollision, collisions } = checkCollision(posX, posY - moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY - moveDist
+          );
           if (!hasCollision) {
             posY -= moveDist;
           } else {
             if (collisions.tl && !collisions.tr) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.tr && !collisions.tl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
         if (eventKey.current === "ArrowDown") {
-          const { hasCollision, collisions } = checkCollision(posX, posY + moveDist);
+          const { hasCollision, collisions } = checkCollision(
+            posX,
+            posY + moveDist
+          );
           if (!hasCollision) {
             posY += moveDist;
           } else {
             if (collisions.bl && !collisions.br) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision) posX += moveDist;
+              if (!checkCollision(posX + moveDist, posY).hasCollision)
+                posX += moveDist;
             } else if (collisions.br && !collisions.bl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision) posX -= moveDist;
+              if (!checkCollision(posX - moveDist, posY).hasCollision)
+                posX -= moveDist;
             }
           }
         }
-        playerEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+        playerEl.style.transform = `translate3d(${posX}px, ${posY - 25}px, 0)`;
         ws.send(
           JSON.stringify({
             type: "move",
@@ -415,7 +506,7 @@ export function game() {
             x: posX,
             y: posY,
             frameX: frameX,
-            frameY: frameY
+            frameY: frameY,
           })
         );
 
@@ -431,68 +522,140 @@ export function game() {
     loop(0);
   }, []);
 
+  console.log(playersAlive);
+
   return jsx(
     "div",
     {
       className: "game-container",
+      style: {
+        // Apply the scale
+        transform: `scale(${scale})`,
+        // Ensure scaling happens from the center
+        transformOrigin: "center center",
+        // CRITICAL: Keep pixel art sharp
+        imageRendering: "pixelated",
+      },
       onKeydown: handleKeyDown,
       onKeyup: handleKeyUp,
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx("div", null, jsx(
+    jsx(
       "div",
-      { className: "map-container", ref: mapRef },
-      ...players.map((p, i) => {
-        return jsx("div", {
-          className: `player player${i}`,
-          style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
-          key: `${p.username}`,
-          ref: playersRef[i],
-        });
-      }),
-      ...grid.map((row, rowIndex) =>
+      { className: "game-hud-container" },
+
+      jsx(
+        "div",
+        { className: "hud-section player-info" },
+        jsx("div", { className: "hud-label" }, "PLAYER"),
+        jsx("div", { className: "hud-value player-name" }, ws.username)
+      ),
+      jsx(
+        "div",
+        { className: "hud-bottom" },
+
         jsx(
           "div",
-          { className: "map-row" },
-          ...row.map((cell, colIndex) =>
-            cell === 6
-              ? [jsx("div", {
-                className: "tile tile-explosion", // Add CSS for this!
-                style: getTileStyle(rowIndex, colIndex, cell),
-                key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                ref: (el) => {
-                  const key = `${rowIndex}-${colIndex}`;
-                  if (el) {
-                    // Element created: Add to registry
-                    explosionElementsRef.current.set(key, el);
-                  } else {
-                    // Element removed: Delete from registry
-                    explosionElementsRef.current.delete(key);
-                  }
-                },
-              }), jsx("div", {
-                className: "tile tile-grass",
-                style: getTileStyle(rowIndex, colIndex, cell),
-                "data-row": rowIndex,
-                "data-col": colIndex,
-                key: `${`grass-${rowIndex}-${colIndex}`}`,
+          { className: "hud-stat lives-stat" },
+          jsx("div", { className: "stat-icon" }, "❤️"),
+          jsx(
+            "div",
+            { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "LIVES"),
+            jsx(
+              "div",
+              { className: "stat-value" },
+              jsx(
+                "div",
+                { className: "hearts-container" },
+                ...Array.from({ length: lives || 3 }, (_, i) =>
+                  jsx("span", { className: "heart", key: i }, "❤️")
+                )
+              )
+            )
+          )
+        ),
 
-              })]
-              :
-              cell === 5
+        jsx(
+          "div",
+          { className: "hud-stat bombs-stat" },
+          jsx("div", { className: "stat-icon" }, "💣"),
+          jsx(
+            "div",
+            { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "BOMBS"),
+            jsx("div", { className: "stat-value bombs-count" }, bombs || 1)
+          )
+        ),
+
+        jsx(
+          "div",
+          { className: "hud-stat range-stat" },
+          jsx("div", { className: "stat-icon" }, "💥"),
+          jsx(
+            "div",
+            { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "RANGE"),
+            jsx("div", { className: "stat-value" }, bombRange || 1)
+          )
+        ),
+
+        jsx(
+          "div",
+          { className: "hud-stat players-stat" },
+          jsx("div", { className: "stat-icon" }, "👥"),
+          jsx(
+            "div",
+            { className: "stat-info" },
+            jsx("div", { className: "stat-label" }, "ALIVE"),
+            jsx("div", { className: "stat-value" }, playersAlive || 1)
+          )
+        )
+      ),
+      jsx(
+        "div",
+        { className: "hud-section1" },
+        jsx("div", { className: "timer-icon" }, "⏱️"),
+        jsx(
+          "div",
+          { className: "timer-display" },
+          jsx("div", { className: "timer-value1" }, Timer)
+        )
+      )
+    ),
+    jsx(
+      "div",
+      { className: "combine-chat-map" },
+      jsx(
+        "div",
+        { className: "map-container", ref: mapRef },
+        ...players.map((p, i) => {
+          return jsx("div", {
+            className: `player player${i}`,
+            style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
+            key: `${p.username}`,
+            ref: playersRef[i],
+          });
+        }),
+        ...grid.map((row, rowIndex) =>
+          jsx(
+            "div",
+            { className: "map-row" },
+            ...row.map((cell, colIndex) =>
+              cell === 6
                 ? [jsx("div", {
-                  className: "tile-bomb",
+                  className: "tile tile-explosion", // Add CSS for this!
                   style: getTileStyle(rowIndex, colIndex, cell),
-                  key: `${rowIndex}-${colIndex}-bomb`,
+                  key: `exp-${rowIndex}-${colIndex}`, // Stable Key
                   ref: (el) => {
                     const key = `${rowIndex}-${colIndex}`;
                     if (el) {
                       // Element created: Add to registry
-                      bombElementsRef.current.set(key, el);
+                      explosionElementsRef.current.set(key, el);
                     } else {
                       // Element removed: Delete from registry
-                      bombElementsRef.current.delete(key);
+                      explosionElementsRef.current.delete(key);
                     }
                   },
                 }), jsx("div", {
@@ -504,37 +667,99 @@ export function game() {
 
                 })]
                 :
-                cell === 2
-                  ? [
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                cell === 5
+                  ? [jsx("div", {
+                    className: "tile tile-bomb",
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    key: `${rowIndex}-${colIndex}-bomb`,
+                    ref: (el) => {
+                      const key = `${rowIndex}-${colIndex}`;
+                      if (el) {
+                        // Element created: Add to registry
+                        bombElementsRef.current.set(key, el);
+                      } else {
+                        // Element removed: Delete from registry
+                        bombElementsRef.current.delete(key);
+                      }
+                    },
+                  }), jsx("div", {
+                    className: "tile tile-grass",
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                    key: `${`grass-${rowIndex}-${colIndex}`}`,
 
-                    }),
-                    jsx("div", {
+                  })]
+                  :
+                  cell === 2
+                    ? [
+                      jsx("div", {
+                        className: "tile tile-grass",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`grass-${rowIndex}-${colIndex}`}`,
+
+                      }),
+                      jsx("div", {
+                        className: tileClass[cell],
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`braml-${rowIndex}-${colIndex}`}`,
+
+                      }),
+                    ]
+                    : jsx("div", {
                       className: tileClass[cell],
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
-                      key: `${`braml-${rowIndex}-${colIndex}`}`,
+                      key: `${`tile-${rowIndex}-${colIndex}`}`,
 
-                    }),
-                  ]
-                  : jsx("div", {
-                    className: tileClass[cell],
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${`tile-${rowIndex}-${colIndex}`}`,
-
-                  })
+                    })
+            )
           )
         )
-      )
-    )),
-    jsx("h1", null, ws.username)
-  );
+      ), jsx(
+        "div",
+        { className: "chat-section-game" },
+        jsx("h3", null, "Game Chat"),
+        jsx(
+          "div",
+          { className: "chat-messages" },
+          ...chat.map((c) =>
+            jsx(
+              "div",
+              { className: "chat-message" },
+              jsx("span", { className: "username" }, c.username + ": "),
+              jsx("span", null, c.msg)
+            )
+          )
+        ),
+
+        jsx(
+          "div",
+          { className: "chat-input-container" },
+          jsx("input", {
+            type: "text",
+            value: msg,
+            placeholder: "Type your message...",
+            oninput: (e) => setMsg(e.target.value),
+            onkeypress: (e) => e.key === "Enter" && sendMsg(e),
+          }),
+          jsx(
+            "button",
+            {
+              onclick: (e) => {
+                sendMsg(e);
+              },
+            },
+            "Send"
+          )
+        )
+      ))
+
+  )
+    ;
 }

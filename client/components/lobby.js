@@ -42,15 +42,15 @@ export function Lobby() {
       if (data.type === "start-game") {
         console.log(data);
 
-        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username });
+        store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username, time: data.time });
         navigate("/map");
       }
     };
   }, []);
 
   const sendMsg = (e) => {
-    if (!msg.trim() || msg.trim().length >= 40) return;
-
+    if (!msg.trim() || msg.trim().length > 30) return;
+    console.log("dkhl f lobby");
     ws.send(
       JSON.stringify({
         type: "message",
@@ -60,6 +60,7 @@ export function Lobby() {
 
     setMsg("");
     e.target.value = "";
+    e.target.previousSibling.value = ""
   };
 
   return jsx("div", { className: "container lobby-wrapper" },
@@ -124,7 +125,7 @@ export function Lobby() {
               onkeypress: (e) => e.key === 'Enter' && sendMsg(e),
             }),
             jsx("button", {
-              onclick: (e) => { e.target.previousSibling.value = ""; sendMsg(e) }
+              onclick: (e) => { sendMsg(e) }
             }, "Send")
           )
         )

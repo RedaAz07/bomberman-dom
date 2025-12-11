@@ -16,6 +16,7 @@ export function Join() {
         }));
         setName("")
         e.target.value = ""
+        e.target.previousSibling.value = ""
     };
 
     ws.onmessage = (event) => {
@@ -44,7 +45,7 @@ export function Join() {
         }),
 
         jsx("button", {
-            onclick: (e) => { e.target.previousSibling.value = ""; handleJoin(e) },
+            onclick: (e) => { handleJoin(e) },
             className: "join-button"
         }, "🎮 JOIN GAME 🎮"),
 
