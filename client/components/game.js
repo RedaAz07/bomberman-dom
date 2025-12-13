@@ -9,13 +9,30 @@ const tileClass = {
   2: "tile tile-braml", // li kaytfjr
   3: "tile tile-wall-corner",
   4: "tile tile-stone", //walo
-  // 5: "tile tile-bomb", // bomb
+  5: "tile tile-bomb", // bomb
+  6: "tile tile-explosion", // explosion
+  7: "tile tile-speed",
+  8: "tile tile-bomb-up",
+  9: "tile tile-power",
 };
-
+const tileTypes = {
+  0: "grass",
+  1: "wall-vertical",
+  2: "wall-corner",
+  3: "stone",
+  4: "braml",
+  5: "bomb",
+  6: "explosion",
+  7: "speed",
+  8: "bomb-up",
+  9: "power",
+};
 export function game() {
+  const space = useRef(null);
+  const divv = useRef(null);
   //! state for the map and players
   const power = 2;
-  const nbBombs = useRef(1);
+  const nbBombs = useRef(2);
   const bombElementsRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
 
@@ -75,7 +92,6 @@ export function game() {
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
-    console.log("dkhl");
     ws.send(
       JSON.stringify({
         type: "message",
@@ -88,12 +104,12 @@ export function game() {
     e.target.previousSibling.value = "";
   };
   //! BOMB PLACEMENT
-  function placeBomb() {
+  function placeBomb(posx, posy) {
     const id = store.get().players.findIndex((p) => p.username === ws.username);
     const playerEl = playersRef[id].current;
     if (!playerEl) return;
 
-    function getLocalPosition(el, parent) {
+    /*  function getLocalPosition(el, parent) {
       const elBox = el.getBoundingClientRect();
       const parentBox = parent.getBoundingClientRect();
 
@@ -101,20 +117,23 @@ export function game() {
         x: elBox.left - parentBox.left,
         y: elBox.top - parentBox.top,
       };
-    }
-    const pos = getLocalPosition(playerEl, mapRef.current);
+    } */
+    // const pos = getLocalPosition(playerEl, mapRef.current);
 
-    const x = Math.round(pos.x / 50);
-    const y = Math.round((pos.y + 13) / 50);
+    const x = Math.round(posx / 50);
+    const y = Math.round(posy / 50);
+    // console.log(x, posx, elBox.x, div.width, "xxxxxxxxxx");
+    // console.log(y, posy + 25, elBox.y, div.height, "yyyyyyyyyyyyy");
+
     const bombId = `bomb-${Date.now()}`;
 
-    nbBombs.current -= 1;
     setGrid((prevGrid) => {
       const newGrid = prevGrid.map((row) => row.slice());
       const colIndex = x;
       const rowIndex = y;
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
+        nbBombs.current -= 1;
       }
       return newGrid;
     });
@@ -145,7 +164,7 @@ export function game() {
       eventKey.current = e.key;
     }
     if (e.key === " " && !e.repeat && nbBombs.current > 0) {
-      placeBomb();
+      space.current = e.key;
     }
   }
 
@@ -429,6 +448,16 @@ export function game() {
         }
       });
 
+      if (space.current === " ") {
+        console.log("lwiskiiiiiiiii");
+        
+        const baseX = playerEl.offsetLeft;
+        const baseY = playerEl.offsetTop;
+        const absX = baseX + posX;
+        const absY = baseY + posY ;
+        placeBomb(absX, absY );
+        space.current = null;
+      }
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
@@ -442,7 +471,6 @@ export function game() {
 
         // movement with deltaTime
         const moveDist = speed * delta;
-
         if (eventKey.current === "ArrowRight") {
           const { hasCollision, collisions } = checkCollision(
             posX + moveDist,
@@ -539,8 +567,6 @@ export function game() {
     }
     loop(0);
   }, []);
-
-  console.log(playersAlive);
 
   return jsx(
     "div",
@@ -667,6 +693,13 @@ export function game() {
               cell === 6
                 ? [
                     jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                    jsx("div", {
                       className: "tile tile-explosion", // Add CSS for this!
                       style: getTileStyle(rowIndex, colIndex, cell),
                       key: `exp-${rowIndex}-${colIndex}`, // Stable Key
@@ -680,13 +713,6 @@ export function game() {
                           explosionElementsRef.current.delete(key);
                         }
                       },
-                    }),
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
                 : cell === 5
@@ -714,7 +740,7 @@ export function game() {
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
-                : cell === 2
+                : cell === 2 || cell >= 7
                 ? [
                     jsx("div", {
                       className: "tile tile-grass",
@@ -728,7 +754,7 @@ export function game() {
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
-                      key: `${`braml-${rowIndex}-${colIndex}`}`,
+                      key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
                 : jsx("div", {
@@ -736,7 +762,8 @@ export function game() {
                     style: getTileStyle(rowIndex, colIndex, cell),
                     "data-row": rowIndex,
                     "data-col": colIndex,
-                    key: `${`tile-${rowIndex}-${colIndex}`}`,
+                    ref: divv,
+                    key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
                   })
             )
           )
