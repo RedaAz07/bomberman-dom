@@ -151,7 +151,7 @@ wss.on("connection", (socket) => {
     if (data.type === "join") {
       const username = data.username.trim();
       let room = findOrCreateRoom();
-
+      if (!room) return;
       if (room.players.some((p) => p.username === username)) {
         return socket.send(
           JSON.stringify({
@@ -183,7 +183,6 @@ wss.on("connection", (socket) => {
     if (data.type === "message") {
       const room = rooms.find((r) => r.id === socket.roomId);
       if (!room) return;
-
       broadcastRoom(room, {
         type: "message",
         username: socket.username,
@@ -193,6 +192,7 @@ wss.on("connection", (socket) => {
 
     if (data.type === "move") {
       const room = rooms.find((r) => r.id === data.roomId)
+      if (!room) return;
       broadcastRoom(room, {
         type: "player-move",
         username: data.username,
@@ -204,12 +204,21 @@ wss.on("connection", (socket) => {
     }
     if (data.type === "place-bomb") {
       const room = rooms.find((r) => r.id === data.roomId);
+      if (!room) return;
       broadcastRoom(room, {
         type: "player-bomb",
         username: data.username,
         x: data.x,
         y: data.y,
       });
+    }
+    if (data.type == "player-dead") {
+      const room = rooms.find((r) => r.id == data.roomId)
+      if (!room) return;
+      broadcastRoom(room, {
+        type: "player-dead",
+        username: data.username
+      })
     }
   });
 

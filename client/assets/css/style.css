@@ -1141,3 +1141,16 @@ p[style*="color: red"],
   height: 50px;
   z-index: 10541;
 }
+
+.you-lose {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  z-index: 9999;
+}

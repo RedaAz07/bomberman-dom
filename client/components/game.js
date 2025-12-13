@@ -77,7 +77,10 @@ export function game() {
   const [lives, setLives] = useState(3);
   const [bombs, setBombs] = useState(3);
   const [bombRange, setBombRange] = useState(4);
+  const [dead, setDead] = useState(false)
   const [Timer, setTimer] = useState("00:00");
+  const explosionHitRef = useRef(false);
+
 
   const playersAlive = store.get().players.length;
   let frameIndex = 0;
@@ -339,10 +342,44 @@ export function game() {
 
         mapData[y][x] = 1;
       }
+      if (data.type == "player-dead") {
+        const index = players.findIndex(p => p.username === data.username);
+        if (index === -1) return;
+
+        const el = playersRef[index]?.current;
+        if (!el) return;
+        el.remove();
+      }
 
     };
+    function checkExplosionHit(playerEl, posX, posY) {
+      if (!playerEl) return false;
+      console.log(playerEl, "player", posX, posY);
+
+      const baseX = playerEl.offsetLeft;
+      const baseY = playerEl.offsetTop;
+
+      // center of player
+      const absX = baseX + posX + 25;
+      const absY = baseY + posY + 25;
+
+      const tileX = Math.floor(absX / 50);
+      const tileY = Math.floor(absY / 50);
+
+      for (let i = 0; i < explosionsRef.current.length; i++) {
+        const exp = explosionsRef.current[i];
+        if (exp.x === tileX && exp.y === tileY) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     //! loop dyalna
     function loop(timeStamp) {
+      if (dead) return;
+
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
 
@@ -483,6 +520,30 @@ export function game() {
         placeBomb(absX, absY);
         space.current = null;
       }
+      // 💥 EXPLOSION COLLISION (ALWAYS CHECK)
+      const hitByExplosion = checkExplosionHit(playerEl, posX, posY);
+
+      if (hitByExplosion && !explosionHitRef.current) {
+        setLives((prev) => {
+          const next = prev - 1
+          if (next == 0) {
+            setDead(true)
+            playerEl.remove()
+            ws.send(JSON.stringify({
+              type: "player-dead",
+              roomId: ws.roomId,
+              username: ws.username,
+            }))
+          }
+          return next
+        })
+        explosionHitRef.current = true;
+      }
+
+      if (!hitByExplosion) {
+        explosionHitRef.current = false;
+      }
+
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
@@ -581,12 +642,14 @@ export function game() {
           })
         );
 
+
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
           animationTimer = 0;
           frameIndex++;
           if (frameIndex >= anim.col.length) frameIndex = 0;
         }
+
       }
       requestAnimationFrame(loop);
     }
@@ -612,7 +675,8 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    jsx(
+    dead == true && jsx("div", { className: "you-lose" }, `you lose Mr/Mm ${ws.username}`)
+    , jsx(
       "div",
       { className: "game-hud-container" },
 
@@ -620,7 +684,7 @@ export function game() {
         "div",
         { className: "hud-section player-info" },
         jsx("div", { className: "hud-label" }, "PLAYER"),
-        jsx("div", { className: "hud-value player-name" }, ws.username)
+        jsx("div", { className: "hud-value player-name" }, ws.username || "jdab")
       ),
       jsx(
         "div",
@@ -640,7 +704,7 @@ export function game() {
               jsx(
                 "div",
                 { className: "hearts-container" },
-                ...Array.from({ length: lives || 3 }, (_, i) =>
+                ...Array.from({ length: lives }, (_, i) =>
                   jsx("span", { className: "heart", key: i }, "❤️")
                 )
               )
