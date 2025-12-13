@@ -57,5 +57,9 @@ export function generateMap(rows, cols) {
     map.push(row);
     collisionMap.push(collisionRow);
   }
-  return { map, collisionMap };
+  return {
+    map,
+    collisionMap,
+    gameSize: { width: cols * 50, height: rows * 50 },
+  };
 }

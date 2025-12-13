@@ -1,0 +1,15 @@
+export const playersMetaData = {
+  0: { top: 50, left: 50, posX: 0, posY: 0, speed: 0.1 },
+  1: { top: 50, left: 700, posX: 0, posY: 0, speed: 0.1 },
+  2: { top: 700, left: 50, posX: 0, posY: 0, speed: 0.1 },
+  3: { top: 700, left: 700, posX: 0, posY: 0, speed: 0.1 },
+};
+export const collisionMap = [];
+export const bombs = [];
+export const rooms = [];
+export const FRAMES = {
+  ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+  ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+  ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+  ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+};

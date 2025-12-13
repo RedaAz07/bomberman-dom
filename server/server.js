@@ -3,13 +3,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
+import { playersMetaData } from "./data/data.js";
 
 const PORT = 3000;
 
 let rooms = [];
 
 function createRoom() {
-  const { map, collisionMap } = generateMap(15, 15);
+  const { map, collisionMap, gameSize } = generateMap(15, 15);
 
   const room = {
     id: rooms.length + 1,
@@ -17,13 +18,12 @@ function createRoom() {
     players: [],
     map,
     collisionMap,
+    gameSize,
     disponible: true,
   };
   rooms.push(room);
   return room;
 }
-
-
 
 function findOrCreateRoom() {
   let room = rooms.find((r) => r.disponible && r.players.length < 4);
@@ -70,7 +70,12 @@ function startGameTimer(room) {
     clearInterval(room.timer);
     room.timer = null;
     room.disponible = false;
-    broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
+    broadcastRoom(room, {
+      type: "start-game",
+      map: room.map,
+      collisionMap: room.collisionMap,
+      players: room.players,
+    });
     // }
   }, 1000);
 }
@@ -143,73 +148,118 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (socket) => {
-
   socket.on("message", (raw) => {
     const data = JSON.parse(raw);
 
     /* ---------------- JOIN ---------------- */
-    if (data.type === "join") {
-      const username = data.username.trim();
-      let room = findOrCreateRoom();
+    switch (data.type) {
+      case "join": {
+        const username = data.username.trim();
+        let room = findOrCreateRoom();
 
-      if (room.players.some((p) => p.username === username)) {
-        return socket.send(
-          JSON.stringify({
-            type: "join-error",
-            msg: "Username already in use",
-          })
+        if (room.players.some((p) => p.username === username)) {
+          return socket.send(
+            JSON.stringify({
+              type: "join-error",
+              msg: "Username already in use",
+            })
+          );
+        }
+
+        room.players.push({ username, socket });
+
+        room.count++;
+        socket.roomId = room.id;
+        socket.username = username;
+
+        broadcastRoom(room, {
+          type: "join-success",
+        });
+
+        broadcastRoom(room, {
+          type: "player-list",
+          players: room.players.map((p) => p.username),
+          roomId: room.id,
+        });
+
+        startGameTimer(room);
+        break;
+      }
+      case "message": {
+        const room = rooms.find((r) => r.id === socket.roomId);
+        if (!room) return;
+
+        broadcastRoom(room, {
+          type: "message",
+          username: socket.username,
+          msg: data.msg,
+        });
+        break;
+      }
+      case "move-right": {
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        let posX = playersMetaData[playerId].posX;
+        let posY = playersMetaData[playerId].posY;
+        const moveDist = playersMetaData[playerId].speed;
+        const { hasCollision, collisions } = checkCollision(
+          playerId,
+          posX + moveDist,
+          posY
         );
+
+        if (!hasCollision) {
+          posX += moveDist;
+        } else {
+          if (collisions.tr && !collisions.br) {
+            if (!checkCollision(posX, posY + moveDist).hasCollision)
+              posY += moveDist;
+          } else if (collisions.br && !collisions.tr) {
+            if (!checkCollision(posX, posY - moveDist).hasCollision)
+              posY -= moveDist;
+          }
+        }
+
+        break;
+      }
+      case "move-left": {
+        break;
+      }
+      case "move-up": {
+        break;
       }
 
-      room.players.push({ username, socket });
-      room.count++
-      socket.roomId = room.id;
-      socket.username = username;
+      case "move-down":
+        {
+          break;
+        }
 
-      broadcastRoom(room, {
-        type: "join-success",
-      })
-
-      broadcastRoom(room, {
-        type: "player-list",
-        players: room.players.map((p) => p.username),
-        roomId: room.id,
-      });
-
-      startGameTimer(room);
-    }
-
-    /* ---------------- CHAT ---------------- */
-    if (data.type === "message") {
-      const room = rooms.find((r) => r.id === socket.roomId);
-      if (!room) return;
-
-      broadcastRoom(room, {
-        type: "message",
-        username: socket.username,
-        msg: data.msg,
-      });
-    }
-
-    if (data.type === "move") {
-      const room = rooms.find((r) => r.id === data.roomId)
-      broadcastRoom(room, {
-        type: "player-move",
-        username: data.username,
-        x: data.x,
-        y: data.y,
-        frameX: data.frameX,
-        frameY: data.frameY
-      })
-    }
-    if (data.type === "place-bomb") {
-      const room = rooms.find((r) => r.id === data.roomId);
-      broadcastRoom(room, {
-        type: "player-bomb",
-        username: data.username,
-        x: data.x,
-        y: data.y,
-      });
+        break;
+      case "move": {
+        const room = rooms.find((r) => r.id === data.roomId);
+        broadcastRoom(room, {
+          type: "player-move",
+          username: data.username,
+          x: data.x,
+          y: data.y,
+          frameX: data.frameX,
+          frameY: data.frameY,
+        });
+        break;
+      }
+      case "place-bomb": {
+        const room = rooms.find((r) => r.id === data.roomId);
+        broadcastRoom(room, {
+          type: "player-bomb",
+          username: data.username,
+          x: data.x,
+          y: data.y,
+        });
+        break;
+      }
+      default:
+        break;
     }
   });
 
