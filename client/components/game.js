@@ -369,55 +369,63 @@ export function game() {
               const cell = newGrid[ty][tx];
 
               if (cell === 1 || cell === 3 || cell === 4) return false;
-
+              if (cell === 5) {
+                bombsRef.current.forEach((bomb) => {
+                  if (bomb.x === tx && bomb.y === ty) {
+                    bomb.creationTime = 0; 
+                  }
+                }
+                );
+              }
               if (cell === 2) {
+                  newGrid[ty][tx] = 6;
+                  mapData[ty][tx] = 0;
+                  hasChanges = true;
+                  explosionsRef.current.push({
+                    x: tx,
+                    y: ty,
+                    creationTime: timeStamp,
+                  });
+                  return false;
+                }
+
                 newGrid[ty][tx] = 6;
                 mapData[ty][tx] = 0;
+
                 hasChanges = true;
                 explosionsRef.current.push({
                   x: tx,
                   y: ty,
                   creationTime: timeStamp,
                 });
-                return false;
-              }
+                return true;
+              };
 
-              newGrid[ty][tx] = 6;
-              mapData[ty][tx] = 0;
+              createExplosion(bomb.x, bomb.y);
 
-              hasChanges = true;
-              explosionsRef.current.push({
-                x: tx,
-                y: ty,
-                creationTime: timeStamp,
+              const directions = [
+                { dx: 0, dy: -1 }, // Up
+                { dx: 0, dy: 1 }, // Down
+                { dx: -1, dy: 0 }, // Left
+                { dx: 1, dy: 0 }, // Right
+              ];
+
+              directions.forEach((dir) => {
+                for (let i = 1; i <= range; i++) {
+                  const currentX = bomb.x + dir.dx * i;
+                  const currentY = bomb.y + dir.dy * i;
+
+                  const shouldContinue = createExplosion(currentX, currentY);
+                  if (!shouldContinue) break;
+                }
               });
-              return true;
-            };
 
-            createExplosion(bomb.x, bomb.y);
-
-            const directions = [
-              { dx: 0, dy: -1 }, // Up
-              { dx: 0, dy: 1 }, // Down
-              { dx: -1, dy: 0 }, // Left
-              { dx: 1, dy: 0 }, // Right
-            ];
-
-            directions.forEach((dir) => {
-              for (let i = 1; i <= range; i++) {
-                const currentX = bomb.x + dir.dx * i;
-                const currentY = bomb.y + dir.dy * i;
-
-                const shouldContinue = createExplosion(currentX, currentY);
-                if (!shouldContinue) break;
-              }
             });
-          });
 
           return hasChanges ? newGrid : prevGrid;
         });
       }
-
+      //! EXPLOSION ANIMATION HANDLING
       explosionsRef.current.forEach((exp) => {
         const key = `${exp.y}-${exp.x}`;
         const explosion = explosionElementsRef.current.get(key);
@@ -431,18 +439,16 @@ export function game() {
           explosion.style.backgroundPosition = `-${frameX}px -150px`;
         }
       });
-
+      //! Remove explosions after 500ms
       const explosionsToDelete = explosionsRef.current.filter(
         (e) => timeStamp - e.creationTime > 500
-      ); // Fire lasts 500ms
+      );
 
       if (explosionsToDelete.length > 0) {
-        // A. Update Logic: Remove expired fire from ref
         explosionsRef.current = explosionsRef.current.filter(
           (e) => timeStamp - e.creationTime <= 500
         );
         nbBombs.current += 1;
-        // B. Update Visuals: Set grid back to Grass (0)
         setGrid((prevGrid) => {
           const newGrid = prevGrid.map((row) => row.slice());
           let hasChanges = false;
@@ -466,7 +472,7 @@ export function game() {
 
         if (bombEl) {
           const age = timeStamp - bomb.creationTime;
-          const currentFrame = Math.floor(age / 800) % 4;
+          const currentFrame = Math.floor(age / 900) % 4;
           const frameX = currentFrame * 50;
 
           bombEl.style.backgroundPosition = `-${frameX}px`;
@@ -474,7 +480,6 @@ export function game() {
       });
 
       if (space.current === " ") {
-        console.log("lwiskiiiiiiiii");
 
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
