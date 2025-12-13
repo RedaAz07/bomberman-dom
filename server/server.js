@@ -42,13 +42,13 @@ function broadcastRoom(room, obj) {
 }
 
 function startGameTimer(room) {
-  // if (room.players.length <= 1) return;
+  if (room.players.length <= 1) return;
 
-  // if (room.players.length === 2) room.timeLeft = 10;
-  // if (room.players.length === 4) room.timeLeft = 10;
+  if (room.players.length === 2) room.timeLeft = 5;
+  if (room.players.length === 4) room.timeLeft = 10;
 
-  // if (room.timer) clearInterval(room.timer);
-  room.timeLeft = 2
+  if (room.timer) clearInterval(room.timer);
+  // room.timeLeft = 2
   room.timer = setInterval(() => {
     room.timeLeft--;
     // if (room.timeLeft <= 10) {
@@ -62,16 +62,16 @@ function startGameTimer(room) {
     //         timeLeft: room.timeLeft - 10,
     //     });
     // }
-  /*   broadcastRoom(room, {
-      type: "counter",
-      timeLeft: room.timeLeft,
-    }); */
-  //  if (room.timeLeft <= 0) {
-      clearInterval(room.timer);
-      room.timer = null;
-      room.disponible = false;
-      broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
-   // }
+    /*   broadcastRoom(room, {
+        type: "counter",
+        timeLeft: room.timeLeft,
+      }); */
+    //  if (room.timeLeft <= 0) {
+    clearInterval(room.timer);
+    room.timer = null;
+    room.disponible = false;
+    broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
+    // }
   }, 1000);
 }
 
@@ -201,6 +201,15 @@ wss.on("connection", (socket) => {
         frameX: data.frameX,
         frameY: data.frameY
       })
+    }
+    if (data.type === "place-bomb") {
+      const room = rooms.find((r) => r.id === data.roomId);
+      broadcastRoom(room, {
+        type: "player-bomb",
+        username: data.username,
+        x: data.x,
+        y: data.y,
+      });
     }
   });
 

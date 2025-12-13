@@ -134,6 +134,15 @@ export function game() {
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
         nbBombs.current -= 1;
+        ws.send(
+          JSON.stringify({
+            type: "place-bomb",
+            roomId: ws.roomId,
+            username: ws.username,
+            x: colIndex,
+            y: rowIndex
+          })
+        );
       }
       return newGrid;
     });
@@ -147,14 +156,7 @@ export function game() {
     const newBomb = { id: bombId, x, y, creationTime: performance.now() };
     bombsRef.current = [...bombsRef.current, newBomb];
 
-    ws.send(
-      JSON.stringify({
-        type: "place-bomb",
-        roomId: ws.roomId,
-        username: ws.username,
-        bomb: newBomb,
-      })
-    );
+
 
     // Remove bomb after 3 seconds
   }
@@ -192,8 +194,8 @@ export function game() {
 
       setTimer(
         String(obj.min).padStart(2, "0") +
-          ":" +
-          String(obj.sec).padStart(2, "0")
+        ":" +
+        String(obj.sec).padStart(2, "0")
       );
     }, 1000);
   }, []);
@@ -294,6 +296,12 @@ export function game() {
     //! WEBSOCKET MESSAGE HANDLER for  moving players
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      if (data.type === "message") {
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
+      }
       if (data.type === "player-move") {
         const { username, x, y, frameX, frameY } = data;
 
@@ -309,14 +317,31 @@ export function game() {
         el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
         el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
       }
-      if (data.type === "message") {
-        setChat((prev) => [
-          ...prev,
-          { username: data.username, msg: data.msg },
-        ]);
-      }
-    };
+      if (data.type === "player-bomb") {
+        if (data.username === ws.username) return;
 
+        const { x, y } = data;
+
+        setGrid((prev) => {
+          const newGrid = prev.map((r) => r.slice());
+          if (newGrid[y] && newGrid[y][x] === 0) {
+            newGrid[y][x] = 5;
+          }
+          return newGrid;
+        });
+
+        bombsRef.current.push({
+          id: `bomb-${Date.now()}`,
+          x,
+          y,
+          creationTime: performance.now(),
+        });
+
+        mapData[y][x] = 1;
+      }
+
+    };
+    //! loop dyalna
     function loop(timeStamp) {
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
@@ -565,6 +590,8 @@ export function game() {
       }
       requestAnimationFrame(loop);
     }
+
+
     loop(0);
   }, []);
 
@@ -716,7 +743,7 @@ export function game() {
                     }),
                   ]
                 : cell === 5
-                ? [
+                  ? [
                     jsx("div", {
                       className: "tile tile-bomb",
                       style: getTileStyle(rowIndex, colIndex, cell),
