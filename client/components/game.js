@@ -475,12 +475,12 @@ export function game() {
 
       if (space.current === " ") {
         console.log("lwiskiiiiiiiii");
-        
+
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
         const absX = baseX + posX;
-        const absY = baseY + posY ;
-        placeBomb(absX, absY );
+        const absY = baseY + posY;
+        placeBomb(absX, absY);
         space.current = null;
       }
       if (eventKey.current) {
@@ -702,15 +702,15 @@ export function game() {
         "div",
         { className: "map-container", ref: mapRef },
         ...players.map((p, i) => {
+          const Me = p.username == ws.username
           return jsx("div", {
             className: `player player${i}`,
-            style: {
-              top: playerPosition[i]?.top,
-              left: playerPosition[i]?.left,
-            },
+            style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
             key: `${p.username}`,
             ref: playersRef[i],
-          });
+          }, jsx("div", { className: "player-label" },
+            !Me && jsx("span", { className: "player-username" }, p.username)
+          ));
         }),
         ...grid.map((row, rowIndex) =>
           jsx(
@@ -719,29 +719,29 @@ export function game() {
             ...row.map((cell, colIndex) =>
               cell === 6
                 ? [
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
-                    }),
-                    jsx("div", {
-                      className: "tile tile-explosion", // Add CSS for this!
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                      ref: (el) => {
-                        const key = `${rowIndex}-${colIndex}`;
-                        if (el) {
-                          // Element created: Add to registry
-                          explosionElementsRef.current.set(key, el);
-                        } else {
-                          // Element removed: Delete from registry
-                          explosionElementsRef.current.delete(key);
-                        }
-                      },
-                    }),
-                  ]
+                  jsx("div", {
+                    className: "tile tile-grass",
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                    key: `${`grass-${rowIndex}-${colIndex}`}`,
+                  }),
+                  jsx("div", {
+                    className: "tile tile-explosion", // Add CSS for this!
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                    ref: (el) => {
+                      const key = `${rowIndex}-${colIndex}`;
+                      if (el) {
+                        // Element created: Add to registry
+                        explosionElementsRef.current.set(key, el);
+                      } else {
+                        // Element removed: Delete from registry
+                        explosionElementsRef.current.delete(key);
+                      }
+                    },
+                  }),
+                ]
                 : cell === 5
                   ? [
                     jsx("div", {
@@ -767,31 +767,31 @@ export function game() {
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
-                : cell === 2 || cell >= 7
-                ? [
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
-                    }),
-                    jsx("div", {
+                  : cell === 2 || cell >= 7
+                    ? [
+                      jsx("div", {
+                        className: "tile tile-grass",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`grass-${rowIndex}-${colIndex}`}`,
+                      }),
+                      jsx("div", {
+                        className: tileClass[cell],
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
+                      }),
+                    ]
+                    : jsx("div", {
                       className: tileClass[cell],
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
+                      ref: divv,
                       key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                    }),
-                  ]
-                : jsx("div", {
-                    className: tileClass[cell],
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    ref: divv,
-                    key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                  })
+                    })
             )
           )
         )
