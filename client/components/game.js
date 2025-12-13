@@ -3,11 +3,10 @@ import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
-import { createRefMap } from "../utils/proxy.js";
 const tileClass = {
-  0: "tile tile-grass", // ard 
+  0: "tile tile-grass", // ard
   1: "tile tile-wall-vertical", //  hiit
-  2: "tile tile-braml",// li kaytfjr 
+  2: "tile tile-braml", // li kaytfjr
   3: "tile tile-wall-corner",
   4: "tile tile-stone", //walo
   // 5: "tile tile-bomb", // bomb
@@ -15,16 +14,16 @@ const tileClass = {
 
 export function game() {
   //! state for the map and players
-  const power = 2
-  const nbBombs = useRef(1)
-  const bombElementsRef = useRef(createRefMap());
-  const explosionElementsRef = useRef(createRefMap());
+  const power = 2;
+  const nbBombs = useRef(1);
+  const bombElementsRef = useRef(new Map());
+  const explosionElementsRef = useRef(new Map());
 
   const explosionsRef = useRef([]);
   const bombsRef = useRef([]);
-  const Map = store.get().map;
+  const map = store.get().map;
   const players = store.get().players;
-  const [grid, setGrid] = useState(Map);
+  const [grid, setGrid] = useState(map);
   const mapRef = useRef(null);
   const [playerPosition, setPlayerPosition] = useState({
     0: { top: "0px", left: "0px" },
@@ -90,7 +89,7 @@ export function game() {
   };
   //! BOMB PLACEMENT
   function placeBomb() {
-    const id = store.get().players.findIndex((p) => p.username === ws.username)
+    const id = store.get().players.findIndex((p) => p.username === ws.username);
     const playerEl = playersRef[id].current;
     if (!playerEl) return;
 
@@ -100,12 +99,12 @@ export function game() {
 
       return {
         x: elBox.left - parentBox.left,
-        y: elBox.top - parentBox.top
+        y: elBox.top - parentBox.top,
       };
     }
     const pos = getLocalPosition(playerEl, mapRef.current);
 
-    const x = Math.round(pos.x / 50)
+    const x = Math.round(pos.x / 50);
     const y = Math.round((pos.y + 13) / 50);
     const bombId = `bomb-${Date.now()}`;
 
@@ -115,19 +114,13 @@ export function game() {
       const colIndex = x;
       const rowIndex = y;
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
-
-
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
       }
       return newGrid;
     });
 
-
-
-
     for (const bomb of bombsRef.current) {
       if (bomb.x === x && bomb.y === y) {
-
         return;
       }
     }
@@ -135,18 +128,16 @@ export function game() {
     const newBomb = { id: bombId, x, y, creationTime: performance.now() };
     bombsRef.current = [...bombsRef.current, newBomb];
 
-
     ws.send(
       JSON.stringify({
         type: "place-bomb",
         roomId: ws.roomId,
         username: ws.username,
-        bomb: newBomb
+        bomb: newBomb,
       })
     );
 
     // Remove bomb after 3 seconds
-
   }
   //! EVENT HANDLERS
   function handleKeyDown(e) {
@@ -154,13 +145,9 @@ export function game() {
       eventKey.current = e.key;
     }
     if (e.key === " " && !e.repeat && nbBombs.current > 0) {
-
       placeBomb();
     }
   }
-
-
-
 
   function handleKeyUp(e) {
     if (eventKey.current === e.key) {
@@ -186,15 +173,15 @@ export function game() {
 
       setTimer(
         String(obj.min).padStart(2, "0") +
-        ":" +
-        String(obj.sec).padStart(2, "0")
+          ":" +
+          String(obj.sec).padStart(2, "0")
       );
     }, 1000);
   }, []);
   // SPRITE DATA
 
   useEffect(() => {
-    //! setup the players 
+    //! setup the players
     if (!mapRef.current) return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -265,10 +252,25 @@ export function game() {
         collisions[key] = isBlocked;
         if (isBlocked) hasCollision = true;
       }
+      let escapeTheBomb = true;
+      for (let index = 0; index < bombsRef.current.length; index++) {
+        const bomb = bombsRef.current[index];
+        for (const key in points) {
+          const point = points[key];
+          const tileX = Math.floor(point.x / 50);
+          const tileY = Math.floor(point.y / 50);
+
+          if (bomb.x === tileX && bomb.y === tileY) {
+            escapeTheBomb = false;
+            break;
+          }
+        }
+        if (escapeTheBomb) {
+          mapData[bomb.y][bomb.x] = 1;
+        }
+      }
       return { hasCollision, collisions };
     }
-
-
 
     //! WEBSOCKET MESSAGE HANDLER for  moving players
     ws.onmessage = (event) => {
@@ -302,16 +304,19 @@ export function game() {
 
       //! BOMB ANIMATION AND EXPLOSION HANDLING
 
-      const bombsToDelete = bombsRef.current.filter(b => timeStamp - b.creationTime > 3000);
+      const bombsToDelete = bombsRef.current.filter(
+        (b) => timeStamp - b.creationTime > 3000
+      );
 
       if (bombsToDelete.length > 0) {
-        bombsRef.current = bombsRef.current.filter(b => timeStamp - b.creationTime <= 3000);
-        setGrid(prevGrid => {
-          const newGrid = prevGrid.map(row => row.slice());
+        bombsRef.current = bombsRef.current.filter(
+          (b) => timeStamp - b.creationTime <= 3000
+        );
+        setGrid((prevGrid) => {
+          const newGrid = prevGrid.map((row) => row.slice());
           let hasChanges = false;
 
-
-          bombsToDelete.forEach(bomb => {
+          bombsToDelete.forEach((bomb) => {
             const range = power || 1;
 
             const createExplosion = (tx, ty) => {
@@ -323,31 +328,41 @@ export function game() {
 
               if (cell === 2) {
                 newGrid[ty][tx] = 6;
+                mapData[ty][tx] = 0;
                 hasChanges = true;
-                explosionsRef.current.push({ x: tx, y: ty, creationTime: timeStamp });
+                explosionsRef.current.push({
+                  x: tx,
+                  y: ty,
+                  creationTime: timeStamp,
+                });
                 return false;
               }
 
               newGrid[ty][tx] = 6;
+              mapData[ty][tx] = 0;
+
               hasChanges = true;
-              explosionsRef.current.push({ x: tx, y: ty, creationTime: timeStamp });
+              explosionsRef.current.push({
+                x: tx,
+                y: ty,
+                creationTime: timeStamp,
+              });
               return true;
             };
-
 
             createExplosion(bomb.x, bomb.y);
 
             const directions = [
               { dx: 0, dy: -1 }, // Up
-              { dx: 0, dy: 1 },  // Down
+              { dx: 0, dy: 1 }, // Down
               { dx: -1, dy: 0 }, // Left
-              { dx: 1, dy: 0 }   // Right
+              { dx: 1, dy: 0 }, // Right
             ];
 
-            directions.forEach(dir => {
+            directions.forEach((dir) => {
               for (let i = 1; i <= range; i++) {
-                const currentX = bomb.x + (dir.dx * i);
-                const currentY = bomb.y + (dir.dy * i);
+                const currentX = bomb.x + dir.dx * i;
+                const currentY = bomb.y + dir.dy * i;
 
                 const shouldContinue = createExplosion(currentX, currentY);
                 if (!shouldContinue) break;
@@ -358,7 +373,6 @@ export function game() {
           return hasChanges ? newGrid : prevGrid;
         });
       }
-
 
       explosionsRef.current.forEach((exp) => {
         const key = `${exp.y}-${exp.x}`;
@@ -374,19 +388,22 @@ export function game() {
         }
       });
 
-
-      const explosionsToDelete = explosionsRef.current.filter(e => timeStamp - e.creationTime > 500); // Fire lasts 500ms
+      const explosionsToDelete = explosionsRef.current.filter(
+        (e) => timeStamp - e.creationTime > 500
+      ); // Fire lasts 500ms
 
       if (explosionsToDelete.length > 0) {
         // A. Update Logic: Remove expired fire from ref
-        explosionsRef.current = explosionsRef.current.filter(e => timeStamp - e.creationTime <= 500);
+        explosionsRef.current = explosionsRef.current.filter(
+          (e) => timeStamp - e.creationTime <= 500
+        );
         nbBombs.current += 1;
         // B. Update Visuals: Set grid back to Grass (0)
-        setGrid(prevGrid => {
-          const newGrid = prevGrid.map(row => row.slice());
+        setGrid((prevGrid) => {
+          const newGrid = prevGrid.map((row) => row.slice());
           let hasChanges = false;
 
-          explosionsToDelete.forEach(exp => {
+          explosionsToDelete.forEach((exp) => {
             if (newGrid[exp.y] && newGrid[exp.y][exp.x] === 6) {
               newGrid[exp.y][exp.x] = 0;
               mapData[exp.y][exp.x] = 0;
@@ -412,9 +429,6 @@ export function game() {
         }
       });
 
-
-
-
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
@@ -434,6 +448,7 @@ export function game() {
             posX + moveDist,
             posY
           );
+
           if (!hasCollision) {
             posX += moveDist;
           } else {
@@ -451,6 +466,7 @@ export function game() {
             posX - moveDist,
             posY
           );
+
           if (!hasCollision) {
             posX -= moveDist;
           } else {
@@ -468,6 +484,7 @@ export function game() {
             posX,
             posY - moveDist
           );
+
           if (!hasCollision) {
             posY -= moveDist;
           } else {
@@ -485,6 +502,7 @@ export function game() {
             posX,
             posY + moveDist
           );
+
           if (!hasCollision) {
             posY += moveDist;
           } else {
@@ -633,7 +651,10 @@ export function game() {
         ...players.map((p, i) => {
           return jsx("div", {
             className: `player player${i}`,
-            style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
+            style: {
+              top: playerPosition[i]?.top,
+              left: playerPosition[i]?.left,
+            },
             key: `${p.username}`,
             ref: playersRef[i],
           });
@@ -644,84 +665,84 @@ export function game() {
             { className: "map-row" },
             ...row.map((cell, colIndex) =>
               cell === 6
-                ? [jsx("div", {
-                  className: "tile tile-explosion", // Add CSS for this!
-                  style: getTileStyle(rowIndex, colIndex, cell),
-                  key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                  ref: (el) => {
-                    const key = `${rowIndex}-${colIndex}`;
-                    if (el) {
-                      // Element created: Add to registry
-                      explosionElementsRef.current.set(key, el);
-                    } else {
-                      // Element removed: Delete from registry
-                      explosionElementsRef.current.delete(key);
-                    }
-                  },
-                }), jsx("div", {
-                  className: "tile tile-grass",
-                  style: getTileStyle(rowIndex, colIndex, cell),
-                  "data-row": rowIndex,
-                  "data-col": colIndex,
-                  key: `${`grass-${rowIndex}-${colIndex}`}`,
-
-                })]
-                :
-                cell === 5
-                  ? [jsx("div", {
-                    className: "tile tile-bomb",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    key: `${rowIndex}-${colIndex}-bomb`,
-                    ref: (el) => {
-                      const key = `${rowIndex}-${colIndex}`;
-                      if (el) {
-                        // Element created: Add to registry
-                        bombElementsRef.current.set(key, el);
-                      } else {
-                        // Element removed: Delete from registry
-                        bombElementsRef.current.delete(key);
-                      }
-                    },
-                  }), jsx("div", {
-                    className: "tile tile-grass",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${`grass-${rowIndex}-${colIndex}`}`,
-
-                  })]
-                  :
-                  cell === 2
-                    ? [
-                      jsx("div", {
-                        className: "tile tile-grass",
-                        style: getTileStyle(rowIndex, colIndex, cell),
-                        "data-row": rowIndex,
-                        "data-col": colIndex,
-                        key: `${`grass-${rowIndex}-${colIndex}`}`,
-
-                      }),
-                      jsx("div", {
-                        className: tileClass[cell],
-                        style: getTileStyle(rowIndex, colIndex, cell),
-                        "data-row": rowIndex,
-                        "data-col": colIndex,
-                        key: `${`braml-${rowIndex}-${colIndex}`}`,
-
-                      }),
-                    ]
-                    : jsx("div", {
+                ? [
+                    jsx("div", {
+                      className: "tile tile-explosion", // Add CSS for this!
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                      ref: (el) => {
+                        const key = `${rowIndex}-${colIndex}`;
+                        if (el) {
+                          // Element created: Add to registry
+                          explosionElementsRef.current.set(key, el);
+                        } else {
+                          // Element removed: Delete from registry
+                          explosionElementsRef.current.delete(key);
+                        }
+                      },
+                    }),
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                  ]
+                : cell === 5
+                ? [
+                    jsx("div", {
+                      className: "tile tile-bomb",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      key: `${rowIndex}-${colIndex}-bomb`,
+                      ref: (el) => {
+                        const key = `${rowIndex}-${colIndex}`;
+                        if (el) {
+                          // Element created: Add to registry
+                          bombElementsRef.current.set(key, el);
+                        } else {
+                          // Element removed: Delete from registry
+                          bombElementsRef.current.delete(key);
+                        }
+                      },
+                    }),
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                  ]
+                : cell === 2
+                ? [
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                    jsx("div", {
                       className: tileClass[cell],
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
-                      key: `${`tile-${rowIndex}-${colIndex}`}`,
-
-                    })
+                      key: `${`braml-${rowIndex}-${colIndex}`}`,
+                    }),
+                  ]
+                : jsx("div", {
+                    className: tileClass[cell],
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                    key: `${`tile-${rowIndex}-${colIndex}`}`,
+                  })
             )
           )
         )
-      ), jsx(
+      ),
+      jsx(
         "div",
         { className: "chat-section-game" },
         jsx("h3", null, "Game Chat"),
@@ -758,8 +779,7 @@ export function game() {
             "Send"
           )
         )
-      ))
-
-  )
-    ;
+      )
+    )
+  );
 }
