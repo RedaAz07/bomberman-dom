@@ -29,6 +29,8 @@ const tileTypes = {
 };
 export function game() {
   const gifts = useRef([]);
+  const giftstoExplosion = useRef([]);
+
   const space = useRef(null);
   const divv = useRef(null);
   //! state for the map and players
@@ -125,7 +127,7 @@ export function game() {
             roomId: ws.roomId,
             username: ws.username,
             x: colIndex,
-            y: rowIndex
+            y: rowIndex,
           })
         );
       }
@@ -140,8 +142,6 @@ export function game() {
 
     const newBomb = { id: bombId, x, y, creationTime: performance.now() };
     bombsRef.current = [...bombsRef.current, newBomb];
-
-
 
     // Remove bomb after 3 seconds
   }
@@ -179,8 +179,8 @@ export function game() {
 
       setTimer(
         String(obj.min).padStart(2, "0") +
-        ":" +
-        String(obj.sec).padStart(2, "0")
+          ":" +
+          String(obj.sec).padStart(2, "0")
       );
     }, 1000);
   }, []);
@@ -324,7 +324,6 @@ export function game() {
 
         mapData[y][x] = 1;
       }
-
     };
     //! loop dyalna
     function loop(timeStamp) {
@@ -359,12 +358,10 @@ export function game() {
                   if (bomb.x === tx && bomb.y === ty) {
                     bomb.creationTime = 0;
                   }
-                }
-                );
+                });
               }
 
               if (cell === 2) {
-
                 gifts.current.push({ x: tx, y: ty });
 
                 newGrid[ty][tx] = 6;
@@ -377,11 +374,15 @@ export function game() {
                 });
                 return false;
               }
-              if (cell != 7 && cell != 8 && cell != 9) {
-                newGrid[ty][tx] = 6;
-                mapData[ty][tx] = 0;
-
+              if (cell == 7 || cell == 8 || cell == 9) {
+                giftstoExplosion.current.push({
+                  x: tx,
+                  y: ty,
+                  cell: cell,
+                });
               }
+              newGrid[ty][tx] = 6;
+              mapData[ty][tx] = 0;
 
               hasChanges = true;
               explosionsRef.current.push({
@@ -410,7 +411,6 @@ export function game() {
                 if (!shouldContinue) break;
               }
             });
-
           });
 
           return hasChanges ? newGrid : prevGrid;
@@ -448,11 +448,17 @@ export function game() {
             if (newGrid[exp.y] && newGrid[exp.y][exp.x] === 6) {
               newGrid[exp.y][exp.x] = 0;
               mapData[exp.y][exp.x] = 0;
-              gifts.current.forEach(gift => {
+              giftstoExplosion.current.forEach((g) => {
+                if (g.x === exp.x && g.y === exp.y) {
+                  newGrid[g.y][g.x] = g.cell;
+                }
+              });
+
+              gifts.current.forEach((gift) => {
                 if (gift.x === exp.x && gift.y === exp.y) {
                   let giftType = Math.floor(Math.random() * 5) + 7;
                   if (giftType > 9) {
-                    giftType = 0
+                    giftType = 0;
                   }
                   newGrid[gift.y][gift.x] = giftType;
                   mapData[gift.y][gift.x] = 0;
@@ -460,11 +466,11 @@ export function game() {
               });
 
               hasChanges = true;
-
             }
           });
 
           gifts.current = [];
+          giftstoExplosion.current = [];
           return hasChanges ? newGrid : prevGrid;
         });
       }
@@ -599,7 +605,6 @@ export function game() {
       requestAnimationFrame(loop);
     }
 
-
     loop(0);
   }, []);
 
@@ -710,15 +715,24 @@ export function game() {
         "div",
         { className: "map-container", ref: mapRef },
         ...players.map((p, i) => {
-          const Me = p.username == ws.username
-          return jsx("div", {
-            className: `player player${i}`,
-            style: { top: playerPosition[i]?.top, left: playerPosition[i]?.left },
-            key: `${p.username}`,
-            ref: playersRef[i],
-          }, jsx("div", { className: "player-label" },
-            !Me && jsx("span", { className: "player-username" }, p.username)
-          ));
+          const Me = p.username == ws.username;
+          return jsx(
+            "div",
+            {
+              className: `player player${i}`,
+              style: {
+                top: playerPosition[i]?.top,
+                left: playerPosition[i]?.left,
+              },
+              key: `${p.username}`,
+              ref: playersRef[i],
+            },
+            jsx(
+              "div",
+              { className: "player-label" },
+              !Me && jsx("span", { className: "player-username" }, p.username)
+            )
+          );
         }),
         ...grid.map((row, rowIndex) =>
           jsx(
@@ -727,31 +741,31 @@ export function game() {
             ...row.map((cell, colIndex) =>
               cell === 6
                 ? [
-                  jsx("div", {
-                    className: "tile tile-grass",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${`grass-${rowIndex}-${colIndex}`}`,
-                  }),
-                  jsx("div", {
-                    className: "tile tile-explosion", // Add CSS for this!
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                    ref: (el) => {
-                      const key = `${rowIndex}-${colIndex}`;
-                      if (el) {
-                        // Element created: Add to registry
-                        explosionElementsRef.current.set(key, el);
-                      } else {
-                        // Element removed: Delete from registry
-                        explosionElementsRef.current.delete(key);
-                      }
-                    },
-                  }),
-                ]
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                    jsx("div", {
+                      className: "tile tile-explosion", // Add CSS for this!
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                      ref: (el) => {
+                        const key = `${rowIndex}-${colIndex}`;
+                        if (el) {
+                          // Element created: Add to registry
+                          explosionElementsRef.current.set(key, el);
+                        } else {
+                          // Element removed: Delete from registry
+                          explosionElementsRef.current.delete(key);
+                        }
+                      },
+                    }),
+                  ]
                 : cell === 5
-                  ? [
+                ? [
                     jsx("div", {
                       className: "tile tile-bomb",
                       style: getTileStyle(rowIndex, colIndex, cell),
@@ -775,31 +789,31 @@ export function game() {
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
-                  : cell === 2 || cell >= 7
-                    ? [
-                      jsx("div", {
-                        className: "tile tile-grass",
-                        style: getTileStyle(rowIndex, colIndex, cell),
-                        "data-row": rowIndex,
-                        "data-col": colIndex,
-                        key: `${`grass-${rowIndex}-${colIndex}`}`,
-                      }),
-                      jsx("div", {
-                        className: tileClass[cell],
-                        style: getTileStyle(rowIndex, colIndex, cell),
-                        "data-row": rowIndex,
-                        "data-col": colIndex,
-                        key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                      }),
-                    ]
-                    : jsx("div", {
+                : cell === 2 || cell >= 7
+                ? [
+                    jsx("div", {
+                      className: "tile tile-grass",
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      "data-row": rowIndex,
+                      "data-col": colIndex,
+                      key: `${`grass-${rowIndex}-${colIndex}`}`,
+                    }),
+                    jsx("div", {
                       className: tileClass[cell],
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
-                      ref: divv,
                       key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                    })
+                    }),
+                  ]
+                : jsx("div", {
+                    className: tileClass[cell],
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                    ref: divv,
+                    key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
+                  })
             )
           )
         )
