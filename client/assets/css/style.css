@@ -105,7 +105,7 @@ body::-webkit-scrollbar {
 
 .tile-power {
   background-image: url("../images/drop-items.png");
-  background-position: 0 200%;
+  background-position: 100% 200%;
   background-size: 100px;
 }
 

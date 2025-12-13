@@ -28,6 +28,7 @@ const tileTypes = {
   9: "power",
 };
 export function game() {
+  const gifts = useRef([]);
   const space = useRef(null);
   const divv = useRef(null);
   //! state for the map and players
@@ -108,25 +109,9 @@ export function game() {
     const id = store.get().players.findIndex((p) => p.username === ws.username);
     const playerEl = playersRef[id].current;
     if (!playerEl) return;
-
-    /*  function getLocalPosition(el, parent) {
-      const elBox = el.getBoundingClientRect();
-      const parentBox = parent.getBoundingClientRect();
-
-      return {
-        x: elBox.left - parentBox.left,
-        y: elBox.top - parentBox.top,
-      };
-    } */
-    // const pos = getLocalPosition(playerEl, mapRef.current);
-
     const x = Math.round(posx / 50);
     const y = Math.round(posy / 50);
-    // console.log(x, posx, elBox.x, div.width, "xxxxxxxxxx");
-    // console.log(y, posy + 25, elBox.y, div.height, "yyyyyyyyyyyyy");
-
     const bombId = `bomb-${Date.now()}`;
-
     setGrid((prevGrid) => {
       const newGrid = prevGrid.map((row) => row.slice());
       const colIndex = x;
@@ -372,55 +357,61 @@ export function game() {
               if (cell === 5) {
                 bombsRef.current.forEach((bomb) => {
                   if (bomb.x === tx && bomb.y === ty) {
-                    bomb.creationTime = 0; 
+                    bomb.creationTime = 0;
                   }
                 }
                 );
               }
+
               if (cell === 2) {
-                  newGrid[ty][tx] = 6;
-                  mapData[ty][tx] = 0;
-                  hasChanges = true;
-                  explosionsRef.current.push({
-                    x: tx,
-                    y: ty,
-                    creationTime: timeStamp,
-                  });
-                  return false;
-                }
+
+                gifts.current.push({ x: tx, y: ty });
 
                 newGrid[ty][tx] = 6;
                 mapData[ty][tx] = 0;
-
                 hasChanges = true;
                 explosionsRef.current.push({
                   x: tx,
                   y: ty,
                   creationTime: timeStamp,
                 });
-                return true;
-              };
+                return false;
+              }
+              if (cell != 7 && cell != 8 && cell != 9) {
+                newGrid[ty][tx] = 6;
+                mapData[ty][tx] = 0;
 
-              createExplosion(bomb.x, bomb.y);
+              }
 
-              const directions = [
-                { dx: 0, dy: -1 }, // Up
-                { dx: 0, dy: 1 }, // Down
-                { dx: -1, dy: 0 }, // Left
-                { dx: 1, dy: 0 }, // Right
-              ];
-
-              directions.forEach((dir) => {
-                for (let i = 1; i <= range; i++) {
-                  const currentX = bomb.x + dir.dx * i;
-                  const currentY = bomb.y + dir.dy * i;
-
-                  const shouldContinue = createExplosion(currentX, currentY);
-                  if (!shouldContinue) break;
-                }
+              hasChanges = true;
+              explosionsRef.current.push({
+                x: tx,
+                y: ty,
+                creationTime: timeStamp,
               });
+              return true;
+            };
 
+            createExplosion(bomb.x, bomb.y);
+
+            const directions = [
+              { dx: 0, dy: -1 }, // Up
+              { dx: 0, dy: 1 }, // Down
+              { dx: -1, dy: 0 }, // Left
+              { dx: 1, dy: 0 }, // Right
+            ];
+
+            directions.forEach((dir) => {
+              for (let i = 1; i <= range; i++) {
+                const currentX = bomb.x + dir.dx * i;
+                const currentY = bomb.y + dir.dy * i;
+
+                const shouldContinue = createExplosion(currentX, currentY);
+                if (!shouldContinue) break;
+              }
             });
+
+          });
 
           return hasChanges ? newGrid : prevGrid;
         });
@@ -457,10 +448,23 @@ export function game() {
             if (newGrid[exp.y] && newGrid[exp.y][exp.x] === 6) {
               newGrid[exp.y][exp.x] = 0;
               mapData[exp.y][exp.x] = 0;
+              gifts.current.forEach(gift => {
+                if (gift.x === exp.x && gift.y === exp.y) {
+                  let giftType = Math.floor(Math.random() * 5) + 7;
+                  if (giftType > 9) {
+                    giftType = 0
+                  }
+                  newGrid[gift.y][gift.x] = giftType;
+                  mapData[gift.y][gift.x] = 0;
+                }
+              });
+
               hasChanges = true;
+
             }
           });
 
+          gifts.current = [];
           return hasChanges ? newGrid : prevGrid;
         });
       }
@@ -472,7 +476,7 @@ export function game() {
 
         if (bombEl) {
           const age = timeStamp - bomb.creationTime;
-          const currentFrame = Math.floor(age / 900) % 4;
+          const currentFrame = Math.floor(age / 800) % 4;
           const frameX = currentFrame * 50;
 
           bombEl.style.backgroundPosition = `-${frameX}px`;
@@ -480,7 +484,6 @@ export function game() {
       });
 
       if (space.current === " ") {
-
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
         const absX = baseX + posX;
