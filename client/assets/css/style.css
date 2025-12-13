@@ -400,6 +400,7 @@ p[style*="color: red"],
 }
 
 .players-section {
+  position: relative;
   background: #1f2749;
   border: 3px solid #4a9eff;
   border-radius: 10px;
