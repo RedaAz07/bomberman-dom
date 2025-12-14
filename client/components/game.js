@@ -27,6 +27,7 @@ const tileTypes = {
   8: "bomb-up",
   9: "power",
 };
+
 export function game() {
   const space = useRef(null);
   const divv = useRef(null);
@@ -48,12 +49,72 @@ export function game() {
     2: { top: "0px", left: "0px" },
     3: { top: "0px", left: "0px" },
   });
+  
   //! STATE AND REFS
   const eventKey = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const mapData = store.get().collisionMap;
+
   //! ANIMATION VARIABLES
   const [scale, setScale] = useState(1);
+
+  //! WEBSOCKET MESSAGE HANDLER for  moving players
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "message") {
+      setChat((prev) => [
+        ...prev,
+        { username: data.username, msg: data.msg },
+      ]);
+    }
+    if (data.type === "player-move") {
+      const { username, x, y, frameX, frameY } = data;
+
+      if (username === ws.username) return;
+
+      const players = store.get().players;
+      const index = players.findIndex((p) => p.username === username);
+      if (index === -1) return;
+
+      const el = playersRef[index]?.current;
+      if (!el) return;
+
+      el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+      el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
+    }
+    if (data.type === "player-bomb") {
+      if (data.username === ws.username) return;
+
+      const { x, y } = data;
+
+      setGrid((prev) => {
+        const newGrid = prev.map((r) => r.slice());
+        if (newGrid[y] && newGrid[y][x] === 0) {
+          newGrid[y][x] = 5;
+        }
+        return newGrid;
+      });
+
+      bombsRef.current.push({
+        id: `bomb-${Date.now()}`,
+        x,
+        y,
+        creationTime: performance.now(),
+      });
+
+      mapData[y][x] = 1;
+    }
+    if (data.type == "player-dead") {
+      const index = players.findIndex(p => p.username === data.username);
+      if (index === -1) return;
+
+      const el = playersRef[index]?.current;
+      if (!el) return;
+      el.style.opacity = 0.4;
+      el = null
+    }
+
+  };
 
   useEffect(() => {
     const width = 1500;
@@ -74,15 +135,13 @@ export function game() {
   }, []);
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState(1);
   const [bombs, setBombs] = useState(3);
   const [bombRange, setBombRange] = useState(4);
   const [dead, setDead] = useState(false)
   const [Timer, setTimer] = useState("00:00");
+  const [speed, setSpeed] = useState(0.1)
   const explosionHitRef = useRef(false);
-
-
-  const playersAlive = store.get().players.length;
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -109,7 +168,7 @@ export function game() {
   //! BOMB PLACEMENT
   function placeBomb(posx, posy) {
     const id = store.get().players.findIndex((p) => p.username === ws.username);
-    const playerEl = playersRef[id].current;
+    let playerEl = playersRef[id].current;
     if (!playerEl) return;
 
     /*  function getLocalPosition(el, parent) {
@@ -224,7 +283,10 @@ export function game() {
     observer.observe(mapRef.current);
     //! WEBSOCKET SETUP
     const id = store.get().players.findIndex((p) => p.username === ws.username);
-    const playerEl = playersRef[id].current;
+    let playerEl = playersRef[id].current;
+    if (!playerEl) {
+      return
+    }
     //! ANIMATION LOOP
     let lastTime = 0;
     let animationTimer = 0;
@@ -296,65 +358,10 @@ export function game() {
       return { hasCollision, collisions };
     }
 
-    //! WEBSOCKET MESSAGE HANDLER for  moving players
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "message") {
-        setChat((prev) => [
-          ...prev,
-          { username: data.username, msg: data.msg },
-        ]);
-      }
-      if (data.type === "player-move") {
-        const { username, x, y, frameX, frameY } = data;
 
-        if (username === ws.username) return;
-
-        const players = store.get().players;
-        const index = players.findIndex((p) => p.username === username);
-        if (index === -1) return;
-
-        const el = playersRef[index]?.current;
-        if (!el) return;
-
-        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
-      }
-      if (data.type === "player-bomb") {
-        if (data.username === ws.username) return;
-
-        const { x, y } = data;
-
-        setGrid((prev) => {
-          const newGrid = prev.map((r) => r.slice());
-          if (newGrid[y] && newGrid[y][x] === 0) {
-            newGrid[y][x] = 5;
-          }
-          return newGrid;
-        });
-
-        bombsRef.current.push({
-          id: `bomb-${Date.now()}`,
-          x,
-          y,
-          creationTime: performance.now(),
-        });
-
-        mapData[y][x] = 1;
-      }
-      if (data.type == "player-dead") {
-        const index = players.findIndex(p => p.username === data.username);
-        if (index === -1) return;
-
-        const el = playersRef[index]?.current;
-        if (!el) return;
-        el.remove();
-      }
-
-    };
     function checkExplosionHit(playerEl, posX, posY) {
       if (!playerEl) return false;
-      console.log(playerEl, "player", posX, posY);
+      // console.log(playerEl, "player", posX, posY);
 
       const baseX = playerEl.offsetLeft;
       const baseY = playerEl.offsetTop;
@@ -378,7 +385,10 @@ export function game() {
 
     //! loop dyalna
     function loop(timeStamp) {
-      if (dead) return;
+      if (dead) {
+        eventKey.current = null;
+        return
+      };
 
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
@@ -511,7 +521,7 @@ export function game() {
       });
 
       if (space.current === " ") {
-        console.log("lwiskiiiiiiiii");
+        // console.log("lwiskiiiiiiiii");
 
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
@@ -527,8 +537,10 @@ export function game() {
         setLives((prev) => {
           const next = prev - 1
           if (next == 0) {
+            // playerEl.style.display = "none"
+            playerEl.style.opacity = 0.4;
+            playerEl = null
             setDead(true)
-            playerEl.remove()
             ws.send(JSON.stringify({
               type: "player-dead",
               roomId: ws.roomId,
@@ -675,11 +687,10 @@ export function game() {
       autoFocus: true,
       tabIndex: 0,
     },
-    dead == true && jsx("div", { className: "you-lose" }, `you lose Mr/Mm ${ws.username}`)
-    , jsx(
+    jsx(
       "div",
       { className: "game-hud-container" },
-
+      dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
       jsx(
         "div",
         { className: "hud-section player-info" },
@@ -720,7 +731,7 @@ export function game() {
             "div",
             { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "BOMBS"),
-            jsx("div", { className: "stat-value bombs-count" }, bombs || 1)
+            jsx("div", { className: "stat-value bombs-count" }, bombs)
           )
         ),
 
@@ -732,19 +743,19 @@ export function game() {
             "div",
             { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "RANGE"),
-            jsx("div", { className: "stat-value" }, bombRange || 1)
+            jsx("div", { className: "stat-value" }, bombRange)
           )
         ),
 
         jsx(
           "div",
           { className: "hud-stat players-stat" },
-          jsx("div", { className: "stat-icon" }, "👥"),
+          jsx("div", { className: "stat-icon" }, "🏃‍➡️​"),
           jsx(
             "div",
             { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "ALIVE"),
-            jsx("div", { className: "stat-value" }, playersAlive || 1)
+            jsx("div", { className: "stat-label" }, "SPEED"),
+            jsx("div", { className: "stat-value" }, speed)
           )
         )
       ),
