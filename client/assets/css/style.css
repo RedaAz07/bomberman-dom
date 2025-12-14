@@ -152,6 +152,7 @@ body::-webkit-scrollbar {
 }
 
 @keyframes colorShift {
+
   0%,
   100% {
     color: #6eb4ff;
@@ -234,6 +235,7 @@ h3::before {
 }
 
 @keyframes blink {
+
   0%,
   50% {
     opacity: 1;
@@ -302,6 +304,7 @@ button:active {
 }
 
 @keyframes buttonGlow {
+
   0%,
   100% {
     box-shadow: 0 4px 0 #2d5fa8, 0 6px 15px rgba(74, 158, 255, 0.3);
@@ -330,6 +333,7 @@ p[style*="color: red"],
 }
 
 @keyframes shake {
+
   0%,
   100% {
     transform: translateX(0);
@@ -388,6 +392,7 @@ p[style*="color: red"],
 }
 
 @keyframes countdown-pulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -467,6 +472,7 @@ p[style*="color: red"],
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -767,7 +773,7 @@ p[style*="color: red"],
 
 .player-label {
   position: absolute;
-  top: -25px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -776,6 +782,7 @@ p[style*="color: red"],
 }
 
 @keyframes label-float {
+
   0%,
   100% {
     transform: translateX(-50%) translateY(0);
@@ -791,11 +798,9 @@ p[style*="color: red"],
   padding: 4px 10px;
   font-size: 9px;
   color: #ffffff;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 107, 107, 0.9),
-    rgba(255, 158, 74, 0.9)
-  );
+  background: linear-gradient(145deg,
+      rgba(255, 107, 107, 0.9),
+      rgba(255, 158, 74, 0.9));
   border: 2px solid #ff6b6b;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 107, 107, 0.4),
@@ -806,44 +811,36 @@ p[style*="color: red"],
 }
 
 .player0 .player-username {
-  background: linear-gradient(
-    145deg,
-    rgba(74, 158, 255, 0.9),
-    rgba(110, 180, 255, 0.9)
-  );
+  background: linear-gradient(145deg,
+      rgba(74, 158, 255, 0.9),
+      rgba(110, 180, 255, 0.9));
   border-color: #4a9eff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(74, 158, 255, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .player1 .player-username {
-  background: linear-gradient(
-    145deg,
-    rgba(78, 255, 142, 0.9),
-    rgba(110, 255, 170, 0.9)
-  );
+  background: linear-gradient(145deg,
+      rgba(78, 255, 142, 0.9),
+      rgba(110, 255, 170, 0.9));
   border-color: #4eff8e;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(78, 255, 142, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .player2 .player-username {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 187, 74, 0.9),
-    rgba(255, 207, 110, 0.9)
-  );
+  background: linear-gradient(145deg,
+      rgba(255, 187, 74, 0.9),
+      rgba(255, 207, 110, 0.9));
   border-color: #ffbb4a;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 187, 74, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .player3 .player-username {
-  background: linear-gradient(
-    145deg,
-    rgba(187, 110, 255, 0.9),
-    rgba(207, 140, 255, 0.9)
-  );
+  background: linear-gradient(145deg,
+      rgba(187, 110, 255, 0.9),
+      rgba(207, 140, 255, 0.9));
   border-color: #bb6eff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 15px rgba(187, 110, 255, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -870,11 +867,9 @@ p[style*="color: red"],
   border: 2px solid #4a9eff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(
-    180deg,
-    rgba(29, 35, 73, 0.95) 0%,
-    rgba(29, 35, 73, 0.7) 100%
-  );
+  background: linear-gradient(180deg,
+      rgba(29, 35, 73, 0.95) 0%,
+      rgba(29, 35, 73, 0.7) 100%);
 }
 
 .hud-section,
@@ -917,6 +912,7 @@ p[style*="color: red"],
 }
 
 @keyframes timer-pulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -1020,6 +1016,7 @@ p[style*="color: red"],
 }
 
 @keyframes heart-beat {
+
   0%,
   100% {
     transform: scale(1);
@@ -1140,4 +1137,22 @@ p[style*="color: red"],
   width: 50px;
   height: 50px;
   z-index: 10541;
+}
+
+.you-lose {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  z-index: 9999;
+}
+
+.disablead {
+  opacity: 0.4;
+  pointer-events: none
 }

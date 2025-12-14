@@ -27,6 +27,7 @@ const tileTypes = {
   8: "bomb-up",
   9: "power",
 };
+
 export function game() {
   /*  const playerSpeed = useRef(0.1);
    const bombPower = useRef(2); */
@@ -52,12 +53,72 @@ export function game() {
     2: { top: "0px", left: "0px" },
     3: { top: "0px", left: "0px" },
   });
+
   //! STATE AND REFS
   const eventKey = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const mapData = store.get().collisionMap;
+
   //! ANIMATION VARIABLES
   const [scale, setScale] = useState(1);
+
+  //! WEBSOCKET MESSAGE HANDLER for  moving players
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "message") {
+      setChat((prev) => [
+        ...prev,
+        { username: data.username, msg: data.msg },
+      ]);
+    }
+    if (data.type === "player-move") {
+      const { username, x, y, frameX, frameY } = data;
+
+      if (username === ws.username) return;
+
+      const players = store.get().players;
+      const index = players.findIndex((p) => p.username === username);
+      if (index === -1) return;
+
+      const el = playersRef[index]?.current;
+      if (!el) return;
+
+      el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+      el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
+    }
+    if (data.type === "player-bomb") {
+      if (data.username === ws.username) return;
+
+      const { x, y } = data;
+
+      setGrid((prev) => {
+        const newGrid = prev.map((r) => r.slice());
+        if (newGrid[y] && newGrid[y][x] === 0) {
+          newGrid[y][x] = 5;
+        }
+        return newGrid;
+      });
+
+      bombsRef.current.push({
+        id: `bomb-${Date.now()}`,
+        x,
+        y,
+        creationTime: performance.now(),
+      });
+
+      mapData[y][x] = 1;
+    }
+    if (data.type == "player-dead") {
+      const index = players.findIndex(p => p.username === data.username);
+      if (index === -1) return;
+
+      const el = playersRef[index]?.current;
+      if (!el) return;
+      el.style.opacity = 0.4;
+      el = null
+    }
+
+  };
 
   useEffect(() => {
     const width = 1500;
@@ -87,10 +148,9 @@ export function game() {
   const bombsNbRef = useRef(1);
   const maxBombsRef = useRef(1);
   const activeBombsRef = useRef(0);
-
   const [Timer, setTimer] = useState("00:00");
-
-  //const playersAlive = store.get().players.length;
+  const [dead, setDead] = useState(false)
+  const explosionHitRef = useRef(false);
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -117,7 +177,7 @@ export function game() {
   //! BOMB PLACEMENT
   function placeBomb(posx, posy) {
     const id = store.get().players.findIndex((p) => p.username === ws.username);
-    const playerEl = playersRef[id].current;
+    let playerEl = playersRef[id].current;
     if (!playerEl) return;
     const x = Math.round(posx / 50);
     const y = Math.round(posy / 50);
@@ -218,7 +278,10 @@ export function game() {
     observer.observe(mapRef.current);
     //! WEBSOCKET SETUP
     const id = store.get().players.findIndex((p) => p.username === ws.username);
-    const playerEl = playersRef[id].current;
+    let playerEl = playersRef[id].current;
+    if (!playerEl) {
+      return
+    }
     //! ANIMATION LOOP
     let lastTime = 0;
     let animationTimer = 0;
@@ -332,55 +395,36 @@ export function game() {
       return { hasCollision, collisions };
     }
 
-    //! WEBSOCKET MESSAGE HANDLER for  moving players
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "message") {
-        setChat((prev) => [
-          ...prev,
-          { username: data.username, msg: data.msg },
-        ]);
+    //! function dyal hit by bombs
+    function checkExplosionHit(playerEl, posX, posY) {
+      if (!playerEl) return false;
+      const baseX = playerEl.offsetLeft;
+      const baseY = playerEl.offsetTop;
+
+      // center of player
+      const absX = baseX + posX + 25;
+      const absY = baseY + posY + 25;
+
+      const tileX = Math.floor(absX / 50);
+      const tileY = Math.floor(absY / 50);
+
+      for (let i = 0; i < explosionsRef.current.length; i++) {
+        const exp = explosionsRef.current[i];
+        if (exp.x === tileX && exp.y === tileY) {
+          return true;
+        }
       }
-      if (data.type === "player-move") {
-        const { username, x, y, frameX, frameY } = data;
 
-        if (username === ws.username) return;
+      return false;
+    }
 
-        const players = store.get().players;
-        const index = players.findIndex((p) => p.username === username);
-        if (index === -1) return;
-
-        const el = playersRef[index]?.current;
-        if (!el) return;
-
-        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
-      }
-      if (data.type === "player-bomb") {
-        if (data.username === ws.username) return;
-
-        const { x, y } = data;
-
-        setGrid((prev) => {
-          const newGrid = prev.map((r) => r.slice());
-          if (newGrid[y] && newGrid[y][x] === 0) {
-            newGrid[y][x] = 5;
-          }
-          return newGrid;
-        });
-
-        bombsRef.current.push({
-          id: `bomb-${Date.now()}`,
-          x,
-          y,
-          creationTime: performance.now(),
-        });
-
-        mapData[y][x] = 1;
-      }
-    };
     //! loop dyalna
     function loop(timeStamp) {
+      if (dead) {
+        eventKey.current = null;
+        return
+      };
+
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
 
@@ -546,6 +590,7 @@ export function game() {
       });
 
       if (space.current === " ") {
+        // console.log("lwiskiiiiiiiii");
 
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
@@ -554,6 +599,32 @@ export function game() {
         placeBomb(absX, absY);
         space.current = null;
       }
+      //! 💥 EXPLOSION COLLISION (ALWAYS CHECK)
+      const hitByExplosion = checkExplosionHit(playerEl, posX, posY);
+
+      if (hitByExplosion && !explosionHitRef.current) {
+        setLives((prev) => {
+          const next = prev - 1
+          if (next == 0) {
+            // playerEl.style.display = "none"
+            playerEl.style.opacity = 0.4;
+            playerEl = null
+            setDead(true)
+            ws.send(JSON.stringify({
+              type: "player-dead",
+              roomId: ws.roomId,
+              username: ws.username,
+            }))
+          }
+          return next
+        })
+        explosionHitRef.current = true;
+      }
+
+      if (!hitByExplosion) {
+        explosionHitRef.current = false;
+      }
+
       if (eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
@@ -652,12 +723,14 @@ export function game() {
           })
         );
 
+
         animationTimer += delta;
         if (animationTimer > animationSpeed) {
           animationTimer = 0;
           frameIndex++;
           if (frameIndex >= anim.col.length) frameIndex = 0;
         }
+
       }
       requestAnimationFrame(loop);
     }
@@ -685,12 +758,12 @@ export function game() {
     jsx(
       "div",
       { className: "game-hud-container" },
-
+      dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
       jsx(
         "div",
         { className: "hud-section player-info" },
         jsx("div", { className: "hud-label" }, "PLAYER"),
-        jsx("div", { className: "hud-value player-name" }, ws.username)
+        jsx("div", { className: "hud-value player-name" }, ws.username || "jdab")
       ),
       jsx(
         "div",
@@ -710,7 +783,7 @@ export function game() {
               jsx(
                 "div",
                 { className: "hearts-container" },
-                ...Array.from({ length: lives || 3 }, (_, i) =>
+                ...Array.from({ length: lives }, (_, i) =>
                   jsx("span", { className: "heart", key: i }, "❤️")
                 )
               )
@@ -726,7 +799,7 @@ export function game() {
             "div",
             { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "BOMBS"),
-            jsx("div", { className: "stat-value bombs-count" }, bombs || 1)
+            jsx("div", { className: "stat-value bombs-count" }, bombs)
           )
         ),
 
@@ -738,7 +811,7 @@ export function game() {
             "div",
             { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "RANGE"),
-            jsx("div", { className: "stat-value" }, bombRange || 1)
+            jsx("div", { className: "stat-value" }, bombRange)
           )
         ),
 
@@ -750,7 +823,7 @@ export function game() {
             "div",
             { className: "stat-info" },
             jsx("div", { className: "stat-label" }, "SPEED"),
-            jsx("div", { className: "stat-value" }, speed || 1)
+            jsx("div", { className: "stat-value" }, speed)
           )
         )
       ),

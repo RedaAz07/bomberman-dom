@@ -139,7 +139,7 @@ export function useEffect(callback, dependencies) {
         deps: dependencies,
         cleanup: cleanupFunction, // <--- THIS is the "return" value
       };
-      console.log("qsdqs", effects, currentIndex);
+      // console.log("qsdqs", effects, currentIndex);
     });
   }
 

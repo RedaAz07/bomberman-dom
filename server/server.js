@@ -44,34 +44,34 @@ function broadcastRoom(room, obj) {
 function startGameTimer(room) {
  // if (room.players.length <= 1) return;
 
-  if (room.players.length === 2) room.timeLeft = 0;
-  if (room.players.length === 4) room.timeLeft = 0;
+  if (room.players.length === 2) room.timeLeft = 10;
+  if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
   // room.timeLeft = 2
   room.timer = setInterval(() => {
     room.timeLeft--;
-    // if (room.timeLeft <= 10) {
-    //     broadcastRoom(room, {
-    //         type: "counter",
-    //         timeLeft: room.timeLeft,
-    //     })
-    // } else {
-    //     broadcastRoom(room, {
-    //         type: "counter",
-    //         timeLeft: room.timeLeft - 10,
-    //     });
-    // }
-    /*   broadcastRoom(room, {
+    if (room.timeLeft <= 10) {
+      broadcastRoom(room, {
         type: "counter",
         timeLeft: room.timeLeft,
-      }); */
-    //  if (room.timeLeft <= 0) {
-    clearInterval(room.timer);
-    room.timer = null;
-    room.disponible = false;
-    broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
-    // }
+      })
+    } else {
+      broadcastRoom(room, {
+        type: "counter",
+        timeLeft: room.timeLeft - 10,
+      });
+    }
+    broadcastRoom(room, {
+      type: "counter",
+      timeLeft: room.timeLeft,
+    });
+    if (room.timeLeft <= 0) {
+      clearInterval(room.timer);
+      room.timer = null;
+      room.disponible = false;
+      broadcastRoom(room, { type: "start-game", map: room.map, collisionMap: room.collisionMap, players: room.players });
+    }
   }, 1000);
 }
 
@@ -151,7 +151,7 @@ wss.on("connection", (socket) => {
     if (data.type === "join") {
       const username = data.username.trim();
       let room = findOrCreateRoom();
-
+      if (!room) return;
       if (room.players.some((p) => p.username === username)) {
         return socket.send(
           JSON.stringify({
@@ -183,7 +183,6 @@ wss.on("connection", (socket) => {
     if (data.type === "message") {
       const room = rooms.find((r) => r.id === socket.roomId);
       if (!room) return;
-
       broadcastRoom(room, {
         type: "message",
         username: socket.username,
@@ -193,6 +192,7 @@ wss.on("connection", (socket) => {
 
     if (data.type === "move") {
       const room = rooms.find((r) => r.id === data.roomId)
+      if (!room) return;
       broadcastRoom(room, {
         type: "player-move",
         username: data.username,
@@ -204,12 +204,21 @@ wss.on("connection", (socket) => {
     }
     if (data.type === "place-bomb") {
       const room = rooms.find((r) => r.id === data.roomId);
+      if (!room) return;
       broadcastRoom(room, {
         type: "player-bomb",
         username: data.username,
         x: data.x,
         y: data.y,
       });
+    }
+    if (data.type == "player-dead") {
+      const room = rooms.find((r) => r.id == data.roomId)
+      if (!room) return;
+      broadcastRoom(room, {
+        type: "player-dead",
+        username: data.username
+      })
     }
   });
 
