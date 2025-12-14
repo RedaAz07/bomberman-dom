@@ -1,8 +1,8 @@
-import { playersMetaData, collisionMap, bombs } from "../data/data.js";
+import { players, collisionMap, bombs } from "../data/data.js";
 
 export function checkCollision(id, newX, newY) {
-  const baseX = playersMetaData[id].top;
-  const baseY = playersMetaData[id].left;
+  const baseX = players[id].top;
+  const baseY = players[id].left;
   const absX = baseX + newX;
   const absY = baseY + newY;
 

@@ -3,7 +3,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
-import { playersMetaData } from "./data/data.js";
+import { players } from "./data/data.js";
+import { broadcastRoom } from "./networking.js";
+import { startGameLoop } from "./gameLoop.js";
 
 const PORT = 3000;
 
@@ -29,16 +31,6 @@ function findOrCreateRoom() {
   let room = rooms.find((r) => r.disponible && r.players.length < 4);
   if (!room) room = createRoom();
   return room;
-}
-
-function broadcastRoom(room, obj) {
-  const msg = JSON.stringify(obj);
-
-  for (const p of room.players) {
-    if (p.socket.readyState === 1) {
-      p.socket.send(msg);
-    }
-  }
 }
 
 function startGameTimer(room) {
@@ -70,6 +62,7 @@ function startGameTimer(room) {
     clearInterval(room.timer);
     room.timer = null;
     room.disponible = false;
+    startGameLoop();
     broadcastRoom(room, {
       type: "start-game",
       map: room.map,
@@ -200,62 +193,55 @@ wss.on("connection", (socket) => {
         const playerId = rooms
           .find((r) => r.id === socket.roomId)
           .players.findIndex((p) => p.socket === socket);
-        let posX = playersMetaData[playerId].posX;
-        let posY = playersMetaData[playerId].posY;
-        const moveDist = playersMetaData[playerId].speed;
-        const { hasCollision, collisions } = checkCollision(
-          playerId,
-          posX + moveDist,
-          posY
-        );
-
-        if (!hasCollision) {
-          posX += moveDist;
-        } else {
-          if (collisions.tr && !collisions.br) {
-            if (!checkCollision(posX, posY + moveDist).hasCollision)
-              posY += moveDist;
-          } else if (collisions.br && !collisions.tr) {
-            if (!checkCollision(posX, posY - moveDist).hasCollision)
-              posY -= moveDist;
-          }
-        }
+        players[playerId].current = "RIGHT";
 
         break;
       }
       case "move-left": {
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        players[playerId].current = "LEFT";
         break;
       }
       case "move-up": {
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        players[playerId].current = "UP";
         break;
       }
 
-      case "move-down":
-        {
-          break;
-        }
-
+      case "move-down": {
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        players[playerId].current = "DOWN";
         break;
-      case "move": {
-        const room = rooms.find((r) => r.id === data.roomId);
-        broadcastRoom(room, {
-          type: "player-move",
-          username: data.username,
-          x: data.x,
-          y: data.y,
-          frameX: data.frameX,
-          frameY: data.frameY,
-        });
+      }
+
+      case "stop-move": {
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        players[playerId].current = "STOP";
         break;
       }
       case "place-bomb": {
-        const room = rooms.find((r) => r.id === data.roomId);
-        broadcastRoom(room, {
-          type: "player-bomb",
-          username: data.username,
-          x: data.x,
-          y: data.y,
-        });
+        const playerId = rooms
+          .find((r) => r.id === socket.roomId)
+          .players.findIndex((p) => p.socket === socket);
+        const isPlacet = players[playerId].placeBomb();
+        if (isPlacet) {
+          broadcastRoom(
+            rooms.find((r) => r.id === socket.roomId),
+            {
+              type: "bomb-placed",
+              playerId,
+              bombs: players[playerId].bombs,
+            }
+          );
+        }
         break;
       }
       default:

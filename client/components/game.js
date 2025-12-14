@@ -4,13 +4,13 @@ import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
 const tileClass = {
-  0: "tile tile-grass",
-  1: "tile tile-wall-vertical",
-  2: "tile tile-braml",
+  0: "tile tile-grass", // ard
+  1: "tile tile-wall-vertical", //  hiit
+  2: "tile tile-braml", // li kaytfjr
   3: "tile tile-wall-corner",
-  4: "tile tile-stone",
-  5: "tile tile-bomb",
-  6: "tile tile-explosion",
+  4: "tile tile-stone", //walo
+  5: "tile tile-bomb", // bomb
+  6: "tile tile-explosion", // explosion
   7: "tile tile-speed",
   8: "tile tile-bomb-up",
   9: "tile tile-power",
@@ -162,9 +162,19 @@ export function game() {
   function handleKeyDown(e) {
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
+      ws.send(
+        JSON.stringify({
+          type: `move-${e.key.slice(5).toLowerCase()}`,
+        })
+      );
     }
     if (e.key === " " && !e.repeat && nbBombs.current > 0) {
       space.current = e.key;
+      ws.send(
+        JSON.stringify({
+          type: "place-bomb",
+        })
+      );
     }
   }
 
@@ -172,6 +182,11 @@ export function game() {
     if (eventKey.current === e.key) {
       eventKey.current = null;
       frameIndex = 0;
+      ws.send(
+        JSON.stringify({
+          type: "stop-move",
+        })
+      );
     }
   }
 
@@ -228,6 +243,68 @@ export function game() {
     let posY = 0;
     let speed = 0.1;
     //! COLLISION DETECTION
+    function checkCollision(newX, newY) {
+      const baseX = playerEl.offsetLeft;
+      const baseY = playerEl.offsetTop;
+      const absX = baseX + newX;
+      const absY = baseY + newY;
+
+      // Full square fit (62x62) to eliminate both horizontal and vertical sliding
+      const hitBox = {
+        x: 1,
+        y: 1,
+        w: 48,
+        h: 48,
+      };
+
+      const points = {
+        tl: { x: absX + hitBox.x, y: absY + hitBox.y },
+        tr: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y },
+        bl: { x: absX + hitBox.x, y: absY + hitBox.y + hitBox.h },
+        br: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y + hitBox.h },
+      };
+
+      const collisions = {};
+      let hasCollision = false;
+
+      for (const key in points) {
+        const point = points[key];
+        const tileX = Math.floor(point.x / 50);
+        const tileY = Math.floor(point.y / 50);
+
+        let isBlocked = false;
+        if (
+          !mapData ||
+          !mapData[tileY] ||
+          mapData[tileY][tileX] === undefined
+        ) {
+          isBlocked = true;
+        } else if (mapData[tileY][tileX] !== 0) {
+          isBlocked = true;
+        }
+
+        collisions[key] = isBlocked;
+        if (isBlocked) hasCollision = true;
+      }
+      let escapeTheBomb = true;
+      for (let index = 0; index < bombsRef.current.length; index++) {
+        const bomb = bombsRef.current[index];
+        for (const key in points) {
+          const point = points[key];
+          const tileX = Math.floor(point.x / 50);
+          const tileY = Math.floor(point.y / 50);
+
+          if (bomb.x === tileX && bomb.y === tileY) {
+            escapeTheBomb = false;
+            break;
+          }
+        }
+        if (escapeTheBomb) {
+          mapData[bomb.y][bomb.x] = 1;
+        }
+      }
+      return { hasCollision, collisions };
+    }
 
     //! WEBSOCKET MESSAGE HANDLER for  moving players
     ws.onmessage = (event) => {
@@ -432,10 +509,24 @@ export function game() {
         // movement with deltaTime
         const moveDist = speed * delta;
         if (eventKey.current === "ArrowRight") {
-          ws.send(JSON.stringify({ type: "move-right" }));
+          const { hasCollision, collisions } = checkCollision(
+            posX + moveDist,
+            posY
+          );
+
+          if (!hasCollision) {
+            posX += moveDist;
+          } else {
+            if (collisions.tr && !collisions.br) {
+              if (!checkCollision(posX, posY + moveDist).hasCollision)
+                posY += moveDist;
+            } else if (collisions.br && !collisions.tr) {
+              if (!checkCollision(posX, posY - moveDist).hasCollision)
+                posY -= moveDist;
+            }
+          }
         }
         if (eventKey.current === "ArrowLeft") {
-          ws.send(JSON.stringify({ type: "move-left" }));
           const { hasCollision, collisions } = checkCollision(
             posX - moveDist,
             posY
@@ -454,7 +545,6 @@ export function game() {
           }
         }
         if (eventKey.current === "ArrowUp") {
-          ws.send(JSON.stringify({ type: "move-up" }));
           const { hasCollision, collisions } = checkCollision(
             posX,
             posY - moveDist
@@ -473,7 +563,6 @@ export function game() {
           }
         }
         if (eventKey.current === "ArrowDown") {
-          ws.send(JSON.stringify({ type: "move-down" }));
           const { hasCollision, collisions } = checkCollision(
             posX,
             posY + moveDist

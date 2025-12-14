@@ -1,11 +1,64 @@
-export const playersMetaData = {
-  0: { top: 50, left: 50, posX: 0, posY: 0, speed: 0.1 },
-  1: { top: 50, left: 700, posX: 0, posY: 0, speed: 0.1 },
-  2: { top: 700, left: 50, posX: 0, posY: 0, speed: 0.1 },
-  3: { top: 700, left: 700, posX: 0, posY: 0, speed: 0.1 },
+import { placeBomb } from "./bombUtils.js";
+export const players = {
+  0: {
+    top: 50,
+    left: 50,
+    posX: 0,
+    posY: 0,
+    speed: 0.1,
+    current: "STOP",
+    username: "",
+    life: 3,
+    power: 1,
+    bombsCount: 1,
+    placeBomb: placeBomb,
+    bombs: [],
+  },
+  1: {
+    top: 50,
+    left: 700,
+    posX: 0,
+    posY: 0,
+    speed: 0.1,
+    current: "STOP",
+    username: "",
+    life: 3,
+    power: 1,
+    bombsCount: 1,
+    placeBomb: placeBomb,
+    bombs: [],
+  },
+  2: {
+    top: 700,
+    left: 50,
+    posX: 0,
+    posY: 0,
+    speed: 0.1,
+    current: "STOP",
+    username: "",
+    life: 3,
+    power: 1,
+    bombsCount: 1,
+    placeBomb: placeBomb,
+    bombs: [],
+  },
+  3: {
+    top: 700,
+    left: 700,
+    posX: 0,
+    posY: 0,
+    speed: 0.1,
+    current: "STOP",
+    username: "",
+    life: 3,
+    power: 1,
+    bombsCount: 1,
+    placeBomb: placeBomb,
+    bombs: [],
+  },
 };
 export const collisionMap = [];
-export const bombs = [];
+export const bombs = {};
 export const rooms = [];
 export const FRAMES = {
   ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
