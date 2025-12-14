@@ -99,7 +99,7 @@ body::-webkit-scrollbar {
 
 .tile-bomb-up {
   background-image: url("../images/drop-items.png");
-  background-position: 0 100%;
+  background-position: -24px 100%;
   background-size: 100px;
 }
 

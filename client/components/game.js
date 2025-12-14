@@ -28,14 +28,15 @@ const tileTypes = {
   9: "power",
 };
 export function game() {
+  /*  const playerSpeed = useRef(0.1);
+   const bombPower = useRef(2); */
+
   const gifts = useRef([]);
   const giftstoExplosion = useRef([]);
-
   const space = useRef(null);
   const divv = useRef(null);
   //! state for the map and players
-  const power = 2;
-  const nbBombs = useRef(2);
+  // const nbBombs = useRef(2);
   const bombElementsRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
 
@@ -78,11 +79,17 @@ export function game() {
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
-  const [bombs, setBombs] = useState(3);
-  const [bombRange, setBombRange] = useState(4);
+  const [speed, setspeed] = useState(1);
+  const [bombs, setBombs] = useState(1);
+  const [bombRange, setBombRange] = useState(1);
+  const speedRef = useRef(0.1);
+  const bombRangeRef = useRef(1);
+  const bombsNbRef = useRef(1);
+
+
   const [Timer, setTimer] = useState("00:00");
 
-  const playersAlive = store.get().players.length;
+  //const playersAlive = store.get().players.length;
   let frameIndex = 0;
   const frameWidth = 64;
   const frameHeight = 64;
@@ -120,7 +127,7 @@ export function game() {
       const rowIndex = y;
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
-        nbBombs.current -= 1;
+        bombsNbRef.current -= 1;
         ws.send(
           JSON.stringify({
             type: "place-bomb",
@@ -150,7 +157,7 @@ export function game() {
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
     }
-    if (e.key === " " && !e.repeat && nbBombs.current > 0) {
+    if (e.key === " " && !e.repeat && bombsNbRef.current > 0) {
       space.current = e.key;
     }
   }
@@ -163,6 +170,7 @@ export function game() {
   }
 
   useEffect(() => {
+
     let obj = {
       min: 0,
       sec: 0,
@@ -179,8 +187,8 @@ export function game() {
 
       setTimer(
         String(obj.min).padStart(2, "0") +
-          ":" +
-          String(obj.sec).padStart(2, "0")
+        ":" +
+        String(obj.sec).padStart(2, "0")
       );
     }, 1000);
   }, []);
@@ -213,7 +221,7 @@ export function game() {
     let animationSpeed = 80;
     let posX = 0;
     let posY = 0;
-    let speed = 0.1;
+
     //! COLLISION DETECTION
     function checkCollision(newX, newY) {
       const baseX = playerEl.offsetLeft;
@@ -245,6 +253,48 @@ export function game() {
         const tileY = Math.floor(point.y / 50);
 
         let isBlocked = false;
+
+        setGrid((prevGrid) => {
+
+          if (prevGrid[tileY][tileX] === 7
+          ) {
+            if (speedRef.current < 0.03) {
+
+              speedRef.current += 0.01;
+              setspeed((prev) => prev + 1);
+            }
+
+            const newGrid = prevGrid.map((row) => row.slice());
+            newGrid[tileY][tileX] = 0;
+            return newGrid;
+
+          } else if (prevGrid[tileY][tileX] === 9) {
+           
+              if (bombsNbRef.current < 3) {
+              bombsNbRef.current += 1;
+              setBombs((prev) => prev + 1);
+            }
+
+            const newGrid = prevGrid.map((row) => row.slice());
+            newGrid[tileY][tileX] = 0;
+            return newGrid;
+
+          } else if (prevGrid[tileY][tileX] === 8) {
+           if (bombRangeRef.current < 3) {
+              bombRangeRef.current += 1;
+              setBombRange((prev) => prev + 1);
+            }
+
+            const newGrid = prevGrid.map((row) => row.slice());
+            newGrid[tileY][tileX] = 0;
+            return newGrid;
+
+          }
+
+          return prevGrid;
+        })
+
+
         if (
           !mapData ||
           !mapData[tileY] ||
@@ -345,7 +395,7 @@ export function game() {
           let hasChanges = false;
 
           bombsToDelete.forEach((bomb) => {
-            const range = power || 1;
+            const range = bombRangeRef.current || 1;
 
             const createExplosion = (tx, ty) => {
               if (!newGrid[ty] || newGrid[ty][tx] === undefined) return false; // Stop
@@ -439,7 +489,7 @@ export function game() {
         explosionsRef.current = explosionsRef.current.filter(
           (e) => timeStamp - e.creationTime <= 500
         );
-        nbBombs.current += 1;
+        bombsNbRef.current += 1;
         setGrid((prevGrid) => {
           const newGrid = prevGrid.map((row) => row.slice());
           let hasChanges = false;
@@ -509,7 +559,7 @@ export function game() {
         playerEl.style.backgroundPosition = `-${frameX}px -${frameY}px`;
 
         // movement with deltaTime
-        const moveDist = speed * delta;
+        const moveDist = speedRef.current * delta;
         if (eventKey.current === "ArrowRight") {
           const { hasCollision, collisions } = checkCollision(
             posX + moveDist,
@@ -688,12 +738,12 @@ export function game() {
         jsx(
           "div",
           { className: "hud-stat players-stat" },
-          jsx("div", { className: "stat-icon" }, "👥"),
+          jsx("div", { className: "stat-icon" }, "⚡"),
           jsx(
             "div",
             { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "ALIVE"),
-            jsx("div", { className: "stat-value" }, playersAlive || 1)
+            jsx("div", { className: "stat-label" }, "SPEED"),
+            jsx("div", { className: "stat-value" }, speed || 1)
           )
         )
       ),
@@ -741,31 +791,31 @@ export function game() {
             ...row.map((cell, colIndex) =>
               cell === 6
                 ? [
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
-                    }),
-                    jsx("div", {
-                      className: "tile tile-explosion", // Add CSS for this!
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                      ref: (el) => {
-                        const key = `${rowIndex}-${colIndex}`;
-                        if (el) {
-                          // Element created: Add to registry
-                          explosionElementsRef.current.set(key, el);
-                        } else {
-                          // Element removed: Delete from registry
-                          explosionElementsRef.current.delete(key);
-                        }
-                      },
-                    }),
-                  ]
+                  jsx("div", {
+                    className: "tile tile-grass",
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    "data-row": rowIndex,
+                    "data-col": colIndex,
+                    key: `${`grass-${rowIndex}-${colIndex}`}`,
+                  }),
+                  jsx("div", {
+                    className: "tile tile-explosion", // Add CSS for this!
+                    style: getTileStyle(rowIndex, colIndex, cell),
+                    key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                    ref: (el) => {
+                      const key = `${rowIndex}-${colIndex}`;
+                      if (el) {
+                        // Element created: Add to registry
+                        explosionElementsRef.current.set(key, el);
+                      } else {
+                        // Element removed: Delete from registry
+                        explosionElementsRef.current.delete(key);
+                      }
+                    },
+                  }),
+                ]
                 : cell === 5
-                ? [
+                  ? [
                     jsx("div", {
                       className: "tile tile-bomb",
                       style: getTileStyle(rowIndex, colIndex, cell),
@@ -789,31 +839,31 @@ export function game() {
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                   ]
-                : cell === 2 || cell >= 7
-                ? [
-                    jsx("div", {
-                      className: "tile tile-grass",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${`grass-${rowIndex}-${colIndex}`}`,
-                    }),
-                    jsx("div", {
+                  : cell === 2 || cell >= 7
+                    ? [
+                      jsx("div", {
+                        className: "tile tile-grass",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`grass-${rowIndex}-${colIndex}`}`,
+                      }),
+                      jsx("div", {
+                        className: tileClass[cell],
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
+                      }),
+                    ]
+                    : jsx("div", {
                       className: tileClass[cell],
                       style: getTileStyle(rowIndex, colIndex, cell),
                       "data-row": rowIndex,
                       "data-col": colIndex,
+                      ref: divv,
                       key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                    }),
-                  ]
-                : jsx("div", {
-                    className: tileClass[cell],
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    ref: divv,
-                    key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                  })
+                    })
             )
           )
         )
