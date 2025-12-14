@@ -85,7 +85,8 @@ export function game() {
   const speedRef = useRef(0.1);
   const bombRangeRef = useRef(1);
   const bombsNbRef = useRef(1);
-
+  const maxBombsRef = useRef(1);
+  const activeBombsRef = useRef(0);
 
   const [Timer, setTimer] = useState("00:00");
 
@@ -121,13 +122,20 @@ export function game() {
     const x = Math.round(posx / 50);
     const y = Math.round(posy / 50);
     const bombId = `bomb-${Date.now()}`;
+    for (const bomb of bombsRef.current) {
+      if (bomb.x === x && bomb.y === y) {
+        return;
+      }
+    }
     setGrid((prevGrid) => {
       const newGrid = prevGrid.map((row) => row.slice());
       const colIndex = x;
       const rowIndex = y;
       if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
         newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
-        bombsNbRef.current -= 1;
+
+        activeBombsRef.current += 1;
+
         ws.send(
           JSON.stringify({
             type: "place-bomb",
@@ -141,11 +149,7 @@ export function game() {
       return newGrid;
     });
 
-    for (const bomb of bombsRef.current) {
-      if (bomb.x === x && bomb.y === y) {
-        return;
-      }
-    }
+
 
     const newBomb = { id: bombId, x, y, creationTime: performance.now() };
     bombsRef.current = [...bombsRef.current, newBomb];
@@ -157,7 +161,7 @@ export function game() {
     if (FRAMES[e.key]) {
       eventKey.current = e.key;
     }
-    if (e.key === " " && !e.repeat && bombsNbRef.current > 0) {
+    if (e.key === " " && !e.repeat && activeBombsRef.current < maxBombsRef.current) {
       space.current = e.key;
     }
   }
@@ -233,10 +237,9 @@ export function game() {
       const hitBox = {
         x: 1,
         y: 1,
-        w: 48,
-        h: 48,
+        w: 40,
+        h: 40,
       };
-
       const points = {
         tl: { x: absX + hitBox.x, y: absY + hitBox.y },
         tr: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y },
@@ -258,9 +261,9 @@ export function game() {
 
           if (prevGrid[tileY][tileX] === 7
           ) {
-            if (speedRef.current < 0.03) {
+            if (speedRef.current < 0.20) {
 
-              speedRef.current += 0.01;
+              speedRef.current += 0.05;
               setspeed((prev) => prev + 1);
             }
 
@@ -269,9 +272,10 @@ export function game() {
             return newGrid;
 
           } else if (prevGrid[tileY][tileX] === 9) {
-           
-              if (bombsNbRef.current < 3) {
-              bombsNbRef.current += 1;
+
+            if (maxBombsRef.current < 3) {
+              maxBombsRef.current += 1;
+
               setBombs((prev) => prev + 1);
             }
 
@@ -280,7 +284,7 @@ export function game() {
             return newGrid;
 
           } else if (prevGrid[tileY][tileX] === 8) {
-           if (bombRangeRef.current < 3) {
+            if (bombRangeRef.current < 3) {
               bombRangeRef.current += 1;
               setBombRange((prev) => prev + 1);
             }
@@ -395,6 +399,7 @@ export function game() {
           let hasChanges = false;
 
           bombsToDelete.forEach((bomb) => {
+            activeBombsRef.current -= 1;
             const range = bombRangeRef.current || 1;
 
             const createExplosion = (tx, ty) => {
@@ -489,7 +494,6 @@ export function game() {
         explosionsRef.current = explosionsRef.current.filter(
           (e) => timeStamp - e.creationTime <= 500
         );
-        bombsNbRef.current += 1;
         setGrid((prevGrid) => {
           const newGrid = prevGrid.map((row) => row.slice());
           let hasChanges = false;
@@ -521,6 +525,8 @@ export function game() {
 
           gifts.current = [];
           giftstoExplosion.current = [];
+
+
           return hasChanges ? newGrid : prevGrid;
         });
       }
@@ -540,6 +546,7 @@ export function game() {
       });
 
       if (space.current === " ") {
+
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
         const absX = baseX + posX;
