@@ -80,7 +80,7 @@ export function game() {
       const index = players.findIndex((p) => p.username === username);
       if (index === -1) return;
 
-      const el = playersRef[index]?.current;
+      let el = playersRef[index]?.current;
       if (!el) return;
 
       el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
@@ -112,7 +112,7 @@ export function game() {
       const index = players.findIndex(p => p.username === data.username);
       if (index === -1) return;
 
-      const el = playersRef[index]?.current;
+      let el = playersRef[index]?.current;
       if (!el) return;
       el.style.opacity = 0.4;
       el = null
