@@ -49,7 +49,7 @@ export function game() {
     2: { top: "0px", left: "0px" },
     3: { top: "0px", left: "0px" },
   });
-  
+
   //! STATE AND REFS
   const eventKey = useRef(null);
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
@@ -358,11 +358,9 @@ export function game() {
       return { hasCollision, collisions };
     }
 
-
+    //! function dyal hit by bombs
     function checkExplosionHit(playerEl, posX, posY) {
       if (!playerEl) return false;
-      // console.log(playerEl, "player", posX, posY);
-
       const baseX = playerEl.offsetLeft;
       const baseY = playerEl.offsetTop;
 
@@ -530,7 +528,7 @@ export function game() {
         placeBomb(absX, absY);
         space.current = null;
       }
-      // 💥 EXPLOSION COLLISION (ALWAYS CHECK)
+      //! 💥 EXPLOSION COLLISION (ALWAYS CHECK)
       const hitByExplosion = checkExplosionHit(playerEl, posX, posY);
 
       if (hitByExplosion && !explosionHitRef.current) {
