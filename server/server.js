@@ -42,26 +42,26 @@ function broadcastRoom(room, obj) {
 }
 
 function startGameTimer(room) {
- // if (room.players.length <= 1) return;
+  // if (room.players.length <= 1) return;
 
-  if (room.players.length === 2) room.timeLeft = 10;
+  if (room.players.length === 2) room.timeLeft = 2;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
   // room.timeLeft = 2
   room.timer = setInterval(() => {
     room.timeLeft--;
-    if (room.timeLeft <= 10) {
-      broadcastRoom(room, {
-        type: "counter",
-        timeLeft: room.timeLeft,
-      })
-    } else {
-      broadcastRoom(room, {
-        type: "counter",
-        timeLeft: room.timeLeft - 10,
-      });
-    }
+    // if (room.timeLeft <= 10) {
+    //   broadcastRoom(room, {
+    //     type: "counter",
+    //     timeLeft: room.timeLeft,
+    //   })
+    // } else {
+    //   broadcastRoom(room, {
+    //     type: "counter",
+    //     timeLeft: room.timeLeft - 10,
+    //   });
+    // }
     broadcastRoom(room, {
       type: "counter",
       timeLeft: room.timeLeft,
@@ -203,6 +203,8 @@ wss.on("connection", (socket) => {
       })
     }
     if (data.type === "place-bomb") {
+      console.log(data, "bombbbbbbbbbbbbbbbbbbbbb");
+
       const room = rooms.find((r) => r.id === data.roomId);
       if (!room) return;
       broadcastRoom(room, {
@@ -220,6 +222,25 @@ wss.on("connection", (socket) => {
         username: data.username
       })
     }
+    if (data.type === "gift") {
+      const room = rooms.find((r) => r.id === data.roomId);
+      if (!room) return;
+      broadcastRoom(room, {
+        type: "gift-spawn",
+        x: data.x,
+        y: data.y,
+        giftType: data.giftType
+      });
+    }
+    if (data.type === "gift-collected") {
+      const room = rooms.find((r) => r.id === socket.roomId);
+      if (!room) return;
+      broadcastRoom(room, {
+        type: "gift-collected",
+        x: data.x,
+        y: data.y,
+      });
+    }
   });
 
   /* ---------------- DISCONNECT ---------------- */
@@ -229,7 +250,7 @@ wss.on("connection", (socket) => {
 
     room.players = room.players.filter((p) => p.socket !== socket);
 
-   // if (room.players.length <= 1) stopTimer(room);
+    // if (room.players.length <= 1) stopTimer(room);
 
     broadcastRoom(room, {
       type: "player-list",

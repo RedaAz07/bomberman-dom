@@ -3,6 +3,7 @@ import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
+
 const tileClass = {
   0: "tile tile-grass", // ard
   1: "tile tile-wall-vertical", //  hiit
@@ -31,7 +32,6 @@ const tileTypes = {
 export function game() {
   /*  const playerSpeed = useRef(0.1);
    const bombPower = useRef(2); */
-
   const gifts = useRef([]);
   const giftstoExplosion = useRef([]);
   const space = useRef(null);
@@ -40,103 +40,6 @@ export function game() {
   // const nbBombs = useRef(2);
   const bombElementsRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
-
-  const explosionsRef = useRef([]);
-  const bombsRef = useRef([]);
-  const map = store.get().map;
-  const players = store.get().players;
-  const [grid, setGrid] = useState(map);
-  const mapRef = useRef(null);
-  const [playerPosition, setPlayerPosition] = useState({
-    0: { top: "0px", left: "0px" },
-    1: { top: "0px", left: "0px" },
-    2: { top: "0px", left: "0px" },
-    3: { top: "0px", left: "0px" },
-  });
-
-  //! STATE AND REFS
-  const eventKey = useRef(null);
-  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
-  const mapData = store.get().collisionMap;
-
-  //! ANIMATION VARIABLES
-  const [scale, setScale] = useState(1);
-
-  //! WEBSOCKET MESSAGE HANDLER for  moving players
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "message") {
-      setChat((prev) => [
-        ...prev,
-        { username: data.username, msg: data.msg },
-      ]);
-    }
-    if (data.type === "player-move") {
-      const { username, x, y, frameX, frameY } = data;
-
-      if (username === ws.username) return;
-
-      const players = store.get().players;
-      const index = players.findIndex((p) => p.username === username);
-      if (index === -1) return;
-
-      let el = playersRef[index]?.current;
-      if (!el) return;
-
-      el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-      el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
-    }
-    if (data.type === "player-bomb") {
-      if (data.username === ws.username) return;
-
-      const { x, y } = data;
-
-      setGrid((prev) => {
-        const newGrid = prev.map((r) => r.slice());
-        if (newGrid[y] && newGrid[y][x] === 0) {
-          newGrid[y][x] = 5;
-        }
-        return newGrid;
-      });
-
-      bombsRef.current.push({
-        id: `bomb-${Date.now()}`,
-        x,
-        y,
-        creationTime: performance.now(),
-      });
-
-      mapData[y][x] = 1;
-    }
-    if (data.type == "player-dead") {
-      const index = players.findIndex(p => p.username === data.username);
-      if (index === -1) return;
-
-      let el = playersRef[index]?.current;
-      if (!el) return;
-      el.style.opacity = 0.4;
-      el = null
-    }
-
-  };
-
-  useEffect(() => {
-    const width = 1500;
-    const height = 1500;
-
-    function handleResize() {
-      if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
-        setScale(1);
-        return;
-      }
-      const widthScale = window.innerWidth / width;
-      const heightScale = window.innerHeight / height;
-      const newScale = Math.min(widthScale, heightScale);
-      setScale(newScale);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-  }, []);
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
@@ -145,7 +48,6 @@ export function game() {
   const [bombRange, setBombRange] = useState(1);
   const speedRef = useRef(0.1);
   const bombRangeRef = useRef(1);
-  const bombsNbRef = useRef(1);
   const maxBombsRef = useRef(1);
   const activeBombsRef = useRef(0);
   const [Timer, setTimer] = useState("00:00");
@@ -160,6 +62,24 @@ export function game() {
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
+  const explosionsRef = useRef([]);
+  const bombsRef = useRef([]);
+  const map = store.get().map;
+  const players = store.get().players;
+  const [grid, setGrid] = useState(map);
+  const mapRef = useRef(null);
+  const [playerPosition, setPlayerPosition] = useState({
+    0: { top: "0px", left: "0px" },
+    1: { top: "0px", left: "0px" },
+    2: { top: "0px", left: "0px" },
+    3: { top: "0px", left: "0px" },
+  });
+  //! STATE AND REFS
+  const eventKey = useRef(null);
+  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const mapData = store.get().collisionMap;
+  //! ANIMATION VARIABLES
+  const [scale, setScale] = useState(1);
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
@@ -233,8 +153,9 @@ export function game() {
     }
   }
 
-  useEffect(() => {
 
+  useEffect(() => {
+    //!timer of game
     let obj = {
       min: 0,
       sec: 0,
@@ -255,10 +176,99 @@ export function game() {
         String(obj.sec).padStart(2, "0")
       );
     }, 1000);
-  }, []);
-  // SPRITE DATA
 
-  useEffect(() => {
+
+    //!websocket onmessage
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "message") {
+        setChat((prev) => [
+          ...prev,
+          { username: data.username, msg: data.msg },
+        ]);
+      }
+      if (data.type === "player-move") {
+        const { username, x, y, frameX, frameY } = data;
+
+        if (username === ws.username) return;
+
+        const players = store.get().players;
+        const index = players.findIndex((p) => p.username === username);
+        if (index === -1) return;
+
+        let el = playersRef[index]?.current;
+        if (!el) return;
+
+        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
+        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
+      }
+      if (data.type === "player-bomb") {
+        if (data.username === ws.username) return;
+        console.log(data, "data client");
+
+        const { x, y } = data;
+
+        setGrid((prev) => {
+          const newGrid = prev.map((r) => r.slice());
+          if (newGrid[y] && newGrid[y][x] === 0) {
+            newGrid[y][x] = 5;
+          }
+          return newGrid;
+        });
+
+        bombsRef.current.push({
+          id: `bomb-${Date.now()}`,
+          x,
+          y,
+          creationTime: performance.now(),
+        });
+
+        mapData[y][x] = 1;
+      }
+      if (data.type == "player-dead") {
+        const index = players.findIndex(p => p.username === data.username);
+        if (index === -1) return;
+
+        let el = playersRef[index]?.current;
+        if (!el) return;
+        el.style.display = "none";
+      }
+      if (data.type === "gift-spawn") {
+        setGrid(prev => {
+          const g = prev.map(r => r.slice());
+          g[data.y][data.x] = data.giftType;
+          return g;
+        });
+      }
+      if (data.type === "gift-collected") {
+        const { x, y } = data;
+        setGrid((prev) => {
+          const newGrid = prev.map((row) => row.slice());
+          newGrid[y][x] = 0;
+          return newGrid;
+        });
+      }
+    };
+
+
+    //! resize window to set scale
+    const width = 1500;
+    const height = 1500;
+
+    function handleResize() {
+      if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
+        setScale(1);
+        return;
+      }
+      const widthScale = window.innerWidth / width;
+      const heightScale = window.innerHeight / height;
+      const newScale = Math.min(widthScale, heightScale);
+      setScale(newScale);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+
     //! setup the players
     if (!mapRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -321,7 +331,6 @@ export function game() {
         let isBlocked = false;
 
         setGrid((prevGrid) => {
-
           if (prevGrid[tileY][tileX] === 7
           ) {
             if (speedRef.current < 0.20) {
@@ -332,6 +341,11 @@ export function game() {
 
             const newGrid = prevGrid.map((row) => row.slice());
             newGrid[tileY][tileX] = 0;
+            ws.send(JSON.stringify({
+              type: "gift-collected",
+              x: tileX,
+              y: tileY,
+            }));
             return newGrid;
 
           } else if (prevGrid[tileY][tileX] === 9) {
@@ -344,6 +358,12 @@ export function game() {
 
             const newGrid = prevGrid.map((row) => row.slice());
             newGrid[tileY][tileX] = 0;
+            ws.send(JSON.stringify({
+              type: "gift-collected",
+              x: tileX,
+              y: tileY,
+
+            }));
             return newGrid;
 
           } else if (prevGrid[tileY][tileX] === 8) {
@@ -354,6 +374,11 @@ export function game() {
 
             const newGrid = prevGrid.map((row) => row.slice());
             newGrid[tileY][tileX] = 0;
+            ws.send(JSON.stringify({
+              type: "gift-collected",
+              x: tileX,
+              y: tileY,
+            }));
             return newGrid;
 
           }
@@ -420,14 +445,9 @@ export function game() {
 
     //! loop dyalna
     function loop(timeStamp) {
-      if (dead) {
-        eventKey.current = null;
-        return
-      };
 
       const delta = timeStamp - lastTime;
       lastTime = timeStamp;
-
       //! BOMB ANIMATION AND EXPLOSION HANDLING
 
       const bombsToDelete = bombsRef.current.filter(
@@ -461,8 +481,8 @@ export function game() {
               }
 
               if (cell === 2) {
-                gifts.current.push({ x: tx, y: ty });
 
+                gifts.current.push({ x: tx, y: ty });
                 newGrid[ty][tx] = 6;
                 mapData[ty][tx] = 0;
                 hasChanges = true;
@@ -558,8 +578,16 @@ export function game() {
                   if (giftType > 9) {
                     giftType = 0;
                   }
+
                   newGrid[gift.y][gift.x] = giftType;
                   mapData[gift.y][gift.x] = 0;
+                  ws.send(JSON.stringify({
+                    type: "gift",
+                    roomId: ws.roomId,
+                    x: gift.x,
+                    y: gift.y,
+                    giftType: giftType
+                  }));
                 }
               });
 
@@ -589,8 +617,7 @@ export function game() {
         }
       });
 
-      if (space.current === " ") {
-        // console.log("lwiskiiiiiiiii");
+      if (!dead && playerEl && space.current === " ") {
 
         const baseX = playerEl.offsetLeft;
         const baseY = playerEl.offsetTop;
@@ -606,15 +633,13 @@ export function game() {
         setLives((prev) => {
           const next = prev - 1
           if (next == 0) {
-            // playerEl.style.display = "none"
-            playerEl.style.opacity = 0.4;
-            playerEl = null
-            setDead(true)
+            playerEl.style.display = "none";
+            setDead(true);
             ws.send(JSON.stringify({
               type: "player-dead",
               roomId: ws.roomId,
               username: ws.username,
-            }))
+            }));
           }
           return next
         })
@@ -625,11 +650,11 @@ export function game() {
         explosionHitRef.current = false;
       }
 
-      if (eventKey.current) {
+
+      if (!dead && eventKey.current) {
         const anim = FRAMES[eventKey.current];
         const col = anim.col[frameIndex];
         const row = anim.row;
-
         // frame position
         const frameX = col * frameWidth;
         const frameY = row * frameHeight;
