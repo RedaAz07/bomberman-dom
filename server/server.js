@@ -231,17 +231,7 @@ wss.on("connection", (socket) => {
         const playerId = rooms
           .find((r) => r.id === socket.roomId)
           .players.findIndex((p) => p.socket === socket);
-        const isPlacet = players[playerId].placeBomb();
-        if (isPlacet) {
-          broadcastRoom(
-            rooms.find((r) => r.id === socket.roomId),
-            {
-              type: "bomb-placed",
-              playerId,
-              bombs: players[playerId].bombs,
-            }
-          );
-        }
+        players[playerId].current = "SPACE";
         break;
       }
       default:

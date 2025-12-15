@@ -7,6 +7,7 @@ export function broadcastPlayerPosition(player) {
         username: player.username,
         x: player.posX,
         y: player.posY,
+        bombs: player.bombs,
       })
     );
   });

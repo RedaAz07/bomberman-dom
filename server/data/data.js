@@ -1,4 +1,4 @@
-import { placeBomb } from "./bombUtils.js";
+import { placeBomb, explodeBomb } from "../bombUtils.js";
 export const players = {
   0: {
     top: 50,
@@ -54,10 +54,12 @@ export const players = {
     power: 1,
     bombsCount: 1,
     placeBomb: placeBomb,
+    explodeBomb: explodeBomb,
     bombs: [],
   },
 };
 export const collisionMap = [];
+export const map = [];
 export const bombs = {};
 export const rooms = [];
 export const FRAMES = {

@@ -1,21 +1,28 @@
 import { players } from "./data/data.js";
 import { broadcastPlayerPosition } from "./networking.js";
 import { checkCollision } from "./collision.js";
+import { performance } from "node:perf_hooks";
+
 export function startGameLoop() {
-  let lastTime = Date.now();
+  let lastTime = 0;
   setInterval(() => {
     for (const id in players) {
-      const player = players[id];
-      if (player.current === "STOP") continue;
-      const now = Date.now();
+      const now = performance.now();
       const deltaTime = now - lastTime;
       lastTime = now;
+      const player = players[id];
+      player.bombs.forEach((bomb) => {
+        const elapsed = performance.now() - bomb.creationTime;
+        if (elapsed >= 3000) {
+          player.explodeBomb(bomb);
+        }
+      });
+      if (player.current === "STOP") continue;
 
       const moveDist = (player.speed * deltaTime) / 1000;
       let posX = player.posX;
       let posY = player.posY;
       if (player.current === "RIGHT") {
-        
         const { hasCollision, collisions } = checkCollision(
           posX + moveDist,
           posY
@@ -86,6 +93,9 @@ export function startGameLoop() {
       }
       player.posX = posX;
       player.posY = posY;
+      if (player.current === "SPACE") {
+        player.placeBomb();
+      }
       broadcastPlayerPosition(player);
     }
   }, 1000 / 30);
