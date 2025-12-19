@@ -203,8 +203,6 @@ wss.on("connection", (socket) => {
       })
     }
     if (data.type === "place-bomb") {
-      console.log(data, "bombbbbbbbbbbbbbbbbbbbbb");
-
       const room = rooms.find((r) => r.id === data.roomId);
       if (!room) return;
       broadcastRoom(room, {
@@ -239,6 +237,14 @@ wss.on("connection", (socket) => {
         type: "gift-collected",
         x: data.x,
         y: data.y,
+      });
+    }
+    if (data.type === "you-lose") {
+      const room = rooms.find((r) => r.id == data.roomId);
+      if (!room) return;
+      broadcastRoom(room, {
+        type: "you-lose",
+        username: data.username
       });
     }
   });

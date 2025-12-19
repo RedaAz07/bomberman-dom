@@ -60,7 +60,9 @@ export function Lobby() {
 
     setMsg("");
     e.target.value = "";
-    e.target.previousSibling.value = ""
+    if (e.key != "Enter") {
+      e.target.previousSibling.value = "";
+    }
   };
 
   return jsx("div", { className: "container lobby-wrapper" },

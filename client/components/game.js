@@ -80,6 +80,27 @@ export function game() {
   const mapData = store.get().collisionMap;
   //! ANIMATION VARIABLES
   const [scale, setScale] = useState(1);
+  //! winner or loser
+  const playerList = [...store.get().players];
+  const [gameResult, setGameResult] = useState(null);
+  console.log("playerList", playerList);
+
+  useEffect(() => {
+    console.log("useeffect");
+
+    if (playerList.length === 1) {
+      setGameResult({
+        type: "win",
+        username: playerList[0].username
+      });
+      ws.send(JSON.stringify({
+        type: "you-lose",
+        roomId: ws.roomId,
+        username: playerList[0].username,
+      }))
+    }
+  }, [playerList]);
+
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
@@ -92,7 +113,9 @@ export function game() {
 
     setMsg("");
     e.target.value = "";
-    e.target.previousSibling.value = "";
+    if (e.key != "Enter") {
+      e.target.previousSibling.value = "";
+    }
   };
   //! BOMB PLACEMENT
   function placeBomb(posx, posy) {
@@ -248,6 +271,17 @@ export function game() {
           return newGrid;
         });
       }
+      if (data.type == "you-lose") {
+        console.log("lose");
+
+        if (data.username == ws.username) {
+          return;
+        }
+        setGameResult({
+          type: "lose",
+          username: data.username
+        });
+      }
     };
 
 
@@ -331,8 +365,7 @@ export function game() {
         let isBlocked = false;
 
         setGrid((prevGrid) => {
-          if (prevGrid[tileY][tileX] === 7
-          ) {
+          if (prevGrid[tileY][tileX] === 7 && prevGrid[tileY][tileX] !== undefined) {
             if (speedRef.current < 0.20) {
 
               speedRef.current += 0.05;
@@ -348,7 +381,7 @@ export function game() {
             }));
             return newGrid;
 
-          } else if (prevGrid[tileY][tileX] === 9) {
+          } else if (prevGrid[tileY][tileX] === 9 && prevGrid[tileY][tileX] !== undefined) {
 
             if (maxBombsRef.current < 3) {
               maxBombsRef.current += 1;
@@ -366,7 +399,7 @@ export function game() {
             }));
             return newGrid;
 
-          } else if (prevGrid[tileY][tileX] === 8) {
+          } else if (prevGrid[tileY][tileX] === 8 && prevGrid[tileY][tileX] !== undefined) {
             if (bombRangeRef.current < 3) {
               bombRangeRef.current += 1;
               setBombRange((prev) => prev + 1);
@@ -635,6 +668,7 @@ export function game() {
           if (next == 0) {
             playerEl.style.display = "none";
             setDead(true);
+            playerList.splice(playerList.findIndex(p => p.username === ws.username), 1);
             ws.send(JSON.stringify({
               type: "player-dead",
               roomId: ws.roomId,
@@ -763,179 +797,140 @@ export function game() {
     loop(0);
   }, []);
 
-  return jsx(
-    "div",
-    {
-      className: "game-container",
-      style: {
-        // Apply the scale
-        transform: `scale(${scale})`,
-        // Ensure scaling happens from the center
-        transformOrigin: "center center",
-        // CRITICAL: Keep pixel art sharp
-        imageRendering: "pixelated",
-      },
-      onKeydown: handleKeyDown,
-      onKeyup: handleKeyUp,
-      autoFocus: true,
-      tabIndex: 0,
-    },
+  return gameResult ? jsx("div", { className: "winner-announcement" }, gameResult.type === "win" ? jsx("div", null, `🎉 Congratulations ${gameResult.username}, You Win! 🎉`) : jsx("div", null, `💀 Sorry ${gameResult.username}, You Lose! 💀`)) :
     jsx(
       "div",
-      { className: "game-hud-container" },
-      dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
+      {
+        className: "game-container",
+        style: {
+          // Apply the scale
+          transform: `scale(${scale})`,
+          // Ensure scaling happens from the center
+          transformOrigin: "center center",
+          // CRITICAL: Keep pixel art sharp
+          imageRendering: "pixelated",
+        },
+        onKeydown: handleKeyDown,
+        onKeyup: handleKeyUp,
+        autoFocus: true,
+        tabIndex: 0,
+      },
       jsx(
         "div",
-        { className: "hud-section player-info" },
-        jsx("div", { className: "hud-label" }, "PLAYER"),
-        jsx("div", { className: "hud-value player-name" }, ws.username || "jdab")
-      ),
-      jsx(
-        "div",
-        { className: "hud-bottom" },
-
+        { className: "game-hud-container" },
+        // dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
         jsx(
           "div",
-          { className: "hud-stat lives-stat" },
-          jsx("div", { className: "stat-icon" }, "❤️"),
+          { className: "hud-section player-info" },
+          jsx("div", { className: "hud-label" }, "PLAYER"),
+          jsx("div", { className: "hud-value player-name" }, ws.username || "jdab")
+        ),
+        jsx(
+          "div",
+          { className: "hud-bottom" },
+
           jsx(
             "div",
-            { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "LIVES"),
+            { className: "hud-stat lives-stat" },
+            jsx("div", { className: "stat-icon" }, "❤️"),
             jsx(
               "div",
-              { className: "stat-value" },
+              { className: "stat-info" },
+              jsx("div", { className: "stat-label" }, "LIVES"),
               jsx(
                 "div",
-                { className: "hearts-container" },
-                ...Array.from({ length: lives }, (_, i) =>
-                  jsx("span", { className: "heart", key: i }, "❤️")
+                { className: "stat-value" },
+                jsx(
+                  "div",
+                  { className: "hearts-container" },
+                  ...Array.from({ length: lives }, (_, i) =>
+                    jsx("span", { className: "heart", key: i }, "❤️")
+                  )
                 )
               )
             )
-          )
-        ),
+          ),
 
-        jsx(
-          "div",
-          { className: "hud-stat bombs-stat" },
-          jsx("div", { className: "stat-icon" }, "💣"),
           jsx(
             "div",
-            { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "BOMBS"),
-            jsx("div", { className: "stat-value bombs-count" }, bombs)
-          )
-        ),
+            { className: "hud-stat bombs-stat" },
+            jsx("div", { className: "stat-icon" }, "💣"),
+            jsx(
+              "div",
+              { className: "stat-info" },
+              jsx("div", { className: "stat-label" }, "BOMBS"),
+              jsx("div", { className: "stat-value bombs-count" }, bombs)
+            )
+          ),
 
-        jsx(
-          "div",
-          { className: "hud-stat range-stat" },
-          jsx("div", { className: "stat-icon" }, "💥"),
           jsx(
             "div",
-            { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "RANGE"),
-            jsx("div", { className: "stat-value" }, bombRange)
-          )
-        ),
+            { className: "hud-stat range-stat" },
+            jsx("div", { className: "stat-icon" }, "💥"),
+            jsx(
+              "div",
+              { className: "stat-info" },
+              jsx("div", { className: "stat-label" }, "RANGE"),
+              jsx("div", { className: "stat-value" }, bombRange)
+            )
+          ),
 
-        jsx(
-          "div",
-          { className: "hud-stat players-stat" },
-          jsx("div", { className: "stat-icon" }, "⚡"),
           jsx(
             "div",
-            { className: "stat-info" },
-            jsx("div", { className: "stat-label" }, "SPEED"),
-            jsx("div", { className: "stat-value" }, speed)
+            { className: "hud-stat players-stat" },
+            jsx("div", { className: "stat-icon" }, "⚡"),
+            jsx(
+              "div",
+              { className: "stat-info" },
+              jsx("div", { className: "stat-label" }, "SPEED"),
+              jsx("div", { className: "stat-value" }, speed)
+            )
+          )
+        ),
+        jsx(
+          "div",
+          { className: "hud-section1" },
+          jsx("div", { className: "timer-icon" }, "⏱️"),
+          jsx(
+            "div",
+            { className: "timer-display" },
+            jsx("div", { className: "timer-value1" }, Timer)
           )
         )
       ),
       jsx(
         "div",
-        { className: "hud-section1" },
-        jsx("div", { className: "timer-icon" }, "⏱️"),
+        { className: "combine-chat-map" },
         jsx(
           "div",
-          { className: "timer-display" },
-          jsx("div", { className: "timer-value1" }, Timer)
-        )
-      )
-    ),
-    jsx(
-      "div",
-      { className: "combine-chat-map" },
-      jsx(
-        "div",
-        { className: "map-container", ref: mapRef },
-        ...players.map((p, i) => {
-          const Me = p.username == ws.username;
-          return jsx(
-            "div",
-            {
-              className: `player player${i}`,
-              style: {
-                top: playerPosition[i]?.top,
-                left: playerPosition[i]?.left,
+          { className: "map-container", ref: mapRef },
+          ...players.map((p, i) => {
+            const Me = p.username == ws.username;
+            return jsx(
+              "div",
+              {
+                className: `player player${i}`,
+                style: {
+                  top: playerPosition[i]?.top,
+                  left: playerPosition[i]?.left,
+                },
+                key: `${p.username}`,
+                ref: playersRef[i],
               },
-              key: `${p.username}`,
-              ref: playersRef[i],
-            },
+              jsx(
+                "div",
+                { className: "player-label" },
+                !Me && jsx("span", { className: "player-username" }, p.username)
+              )
+            );
+          }),
+          ...grid.map((row, rowIndex) =>
             jsx(
               "div",
-              { className: "player-label" },
-              !Me && jsx("span", { className: "player-username" }, p.username)
-            )
-          );
-        }),
-        ...grid.map((row, rowIndex) =>
-          jsx(
-            "div",
-            { className: "map-row" },
-            ...row.map((cell, colIndex) =>
-              cell === 6
-                ? [
-                  jsx("div", {
-                    className: "tile tile-grass",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${`grass-${rowIndex}-${colIndex}`}`,
-                  }),
-                  jsx("div", {
-                    className: "tile tile-explosion", // Add CSS for this!
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    key: `exp-${rowIndex}-${colIndex}`, // Stable Key
-                    ref: (el) => {
-                      const key = `${rowIndex}-${colIndex}`;
-                      if (el) {
-                        // Element created: Add to registry
-                        explosionElementsRef.current.set(key, el);
-                      } else {
-                        // Element removed: Delete from registry
-                        explosionElementsRef.current.delete(key);
-                      }
-                    },
-                  }),
-                ]
-                : cell === 5
+              { className: "map-row" },
+              ...row.map((cell, colIndex) =>
+                cell === 6
                   ? [
-                    jsx("div", {
-                      className: "tile tile-bomb",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      key: `${rowIndex}-${colIndex}-bomb`,
-                      ref: (el) => {
-                        const key = `${rowIndex}-${colIndex}`;
-                        if (el) {
-                          // Element created: Add to registry
-                          bombElementsRef.current.set(key, el);
-                        } else {
-                          // Element removed: Delete from registry
-                          bombElementsRef.current.delete(key);
-                        }
-                      },
-                    }),
                     jsx("div", {
                       className: "tile tile-grass",
                       style: getTileStyle(rowIndex, colIndex, cell),
@@ -943,9 +938,39 @@ export function game() {
                       "data-col": colIndex,
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
+                    jsx("div", {
+                      className: "tile tile-explosion", // Add CSS for this!
+                      style: getTileStyle(rowIndex, colIndex, cell),
+                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                      ref: (el) => {
+                        const key = `${rowIndex}-${colIndex}`;
+                        if (el) {
+                          // Element created: Add to registry
+                          explosionElementsRef.current.set(key, el);
+                        } else {
+                          // Element removed: Delete from registry
+                          explosionElementsRef.current.delete(key);
+                        }
+                      },
+                    }),
                   ]
-                  : cell === 2 || cell >= 7
+                  : cell === 5
                     ? [
+                      jsx("div", {
+                        className: "tile tile-bomb",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        key: `${rowIndex}-${colIndex}-bomb`,
+                        ref: (el) => {
+                          const key = `${rowIndex}-${colIndex}`;
+                          if (el) {
+                            // Element created: Add to registry
+                            bombElementsRef.current.set(key, el);
+                          } else {
+                            // Element removed: Delete from registry
+                            bombElementsRef.current.delete(key);
+                          }
+                        },
+                      }),
                       jsx("div", {
                         className: "tile tile-grass",
                         style: getTileStyle(rowIndex, colIndex, cell),
@@ -953,64 +978,74 @@ export function game() {
                         "data-col": colIndex,
                         key: `${`grass-${rowIndex}-${colIndex}`}`,
                       }),
-                      jsx("div", {
+                    ]
+                    : cell === 2 || cell >= 7
+                      ? [
+                        jsx("div", {
+                          className: "tile tile-grass",
+                          style: getTileStyle(rowIndex, colIndex, cell),
+                          "data-row": rowIndex,
+                          "data-col": colIndex,
+                          key: `${`grass-${rowIndex}-${colIndex}`}`,
+                        }),
+                        jsx("div", {
+                          className: tileClass[cell],
+                          style: getTileStyle(rowIndex, colIndex, cell),
+                          "data-row": rowIndex,
+                          "data-col": colIndex,
+                          key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
+                        }),
+                      ]
+                      : jsx("div", {
                         className: tileClass[cell],
                         style: getTileStyle(rowIndex, colIndex, cell),
                         "data-row": rowIndex,
                         "data-col": colIndex,
+                        ref: divv,
                         key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                      }),
-                    ]
-                    : jsx("div", {
-                      className: tileClass[cell],
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      ref: divv,
-                      key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
-                    })
-            )
-          )
-        )
-      ),
-      jsx(
-        "div",
-        { className: "chat-section-game" },
-        jsx("h3", null, "Game Chat"),
-        jsx(
-          "div",
-          { className: "chat-messages" },
-          ...chat.map((c) =>
-            jsx(
-              "div",
-              { className: "chat-message" },
-              jsx("span", { className: "username" }, c.username + ": "),
-              jsx("span", null, c.msg)
+                      })
+              )
             )
           )
         ),
-
         jsx(
           "div",
-          { className: "chat-input-container" },
-          jsx("input", {
-            type: "text",
-            value: msg,
-            placeholder: "Type your message...",
-            oninput: (e) => setMsg(e.target.value),
-            onkeypress: (e) => e.key === "Enter" && sendMsg(e),
-          }),
+          { className: "chat-section-game" },
+          jsx("h3", null, "Game Chat"),
           jsx(
-            "button",
-            {
-              onclick: (e) => {
-                sendMsg(e);
+            "div",
+            { className: "chat-messages" },
+            ...chat.map((c) =>
+              jsx(
+                "div",
+                { className: "chat-message" },
+                jsx("span", { className: "username" }, c.username + ": "),
+                jsx("span", null, c.msg)
+              )
+            )
+          ),
+
+          jsx(
+            "div",
+            { className: "chat-input-container" },
+            jsx("input", {
+              type: "text",
+              value: msg,
+              placeholder: "Type your message...",
+              oninput: (e) => setMsg(e.target.value),
+              onkeypress: (e) => e.key === "Enter" && sendMsg(e),
+            }),
+            jsx(
+              "button",
+              {
+                onclick: (e) => {
+                  sendMsg(e);
+                },
               },
-            },
-            "Send"
+              "Send"
+            )
           )
         )
       )
-    )
-  );
+    );
 }
