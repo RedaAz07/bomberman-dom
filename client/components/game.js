@@ -83,6 +83,7 @@ export function game() {
   //! winner or loser
   const playerList = [...store.get().players];
   const [gameResult, setGameResult] = useState(null);
+  const [winner, setWinner] = useState(null);
 
 
   const sendMsg = (e) => {
@@ -255,20 +256,25 @@ export function game() {
         });
       }
       if (data.type === "game-over") {
-        console.log("game over", data);
         if (data.winner === ws.username) {
           setGameResult({
             type: "win",
-            username: ws.username
+            username: data.winner
           });
         } else {
           setGameResult({
             type: "lose",
-            username: data.winner
+            username: ws.username
           });
         }
       }
+      if (data.type == "winner") {
+        console.log("winnerrrrrrrrr", data);
 
+        if (data.player !== ws.username) {
+          setWinner(data.player);
+        }
+      }
     };
 
 
@@ -790,10 +796,10 @@ export function game() {
         jsx("div", { className: "result-icon" },
           gameResult.type === "win" ? "🎉" : "💀"
         ),
-        jsx("div", { className: "result-message" },
+        jsx("p", { className: "result-message" },
           gameResult.type === "win"
-            ? `Congratulations ${ws.username}, You Win!`
-            : `Sorry ${ws.username}, You Lose!`
+            ? `Congratulations ${gameResult.username}, You Win!`
+            : `Sorry ${gameResult.username}, You Lose!\n Winner is : ${winner}`
         ),
         jsx("button", {
           className: "replay-button",

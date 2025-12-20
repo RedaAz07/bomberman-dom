@@ -215,11 +215,13 @@ wss.on("connection", (socket) => {
     if (data.type == "player-dead") {
       const room = rooms.find((r) => r.id == data.roomId)
       if (!room) return;
-      console.log(room.players, "players");
-
       const player = room.players.find((p) => p.username === data.username);
       if (player) player.alive = false;
       if (room.players.filter((p) => p.alive).length === 1) {
+        broadcastRoom(room, {
+          type: "winner",
+          player: room.players.find((p) => p.alive).username
+        })
         broadcastRoom(room, {
           type: "game-over",
           winner: room.players.find((p) => p.alive).username
@@ -247,14 +249,6 @@ wss.on("connection", (socket) => {
         type: "gift-collected",
         x: data.x,
         y: data.y,
-      });
-    }
-    if (data.type === "you-lose") {
-      const room = rooms.find((r) => r.id == data.roomId);
-      if (!room) return;
-      broadcastRoom(room, {
-        type: "you-lose",
-        username: data.username
       });
     }
   });
