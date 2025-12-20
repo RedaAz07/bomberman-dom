@@ -211,8 +211,6 @@ export function game() {
       }
       if (data.type === "player-bomb") {
         if (data.username === ws.username) return;
-        console.log(data, "data client");
-
         const { x, y } = data;
 
         setGrid((prev) => {
@@ -269,8 +267,6 @@ export function game() {
         }
       }
       if (data.type == "winner") {
-        console.log("winnerrrrrrrrr", data);
-
         if (data.player !== ws.username) {
           setWinner(data.player);
         }
