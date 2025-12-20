@@ -161,8 +161,8 @@ wss.on("connection", (socket) => {
         );
       }
 
-      room.players.push({ username, socket });
-      room.count++
+      room.players.push({ username, socket, alive: true });
+      room.count++;
       socket.roomId = room.id;
       socket.username = username;
 
@@ -215,6 +215,16 @@ wss.on("connection", (socket) => {
     if (data.type == "player-dead") {
       const room = rooms.find((r) => r.id == data.roomId)
       if (!room) return;
+      console.log(room.players, "players");
+
+      const player = room.players.find((p) => p.username === data.username);
+      if (player) player.alive = false;
+      if (room.players.filter((p) => p.alive).length === 1) {
+        broadcastRoom(room, {
+          type: "game-over",
+          winner: room.players.find((p) => p.alive).username
+        });
+      }
       broadcastRoom(room, {
         type: "player-dead",
         username: data.username
@@ -257,7 +267,14 @@ wss.on("connection", (socket) => {
     room.players = room.players.filter((p) => p.socket !== socket);
 
     // if (room.players.length <= 1) stopTimer(room);
-
+    const player = room.players.find((p) => p.username === socket.username);
+    if (player) player.alive = false;
+    if (room.players.filter((p) => p.alive).length === 1) {
+      broadcastRoom(room, {
+        type: "game-over",
+        winner: room.players.find((p) => p.alive).username
+      });
+    }
     broadcastRoom(room, {
       type: "player-list",
       players: room.players.map((p) => p.username),

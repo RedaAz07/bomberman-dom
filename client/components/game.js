@@ -83,23 +83,6 @@ export function game() {
   //! winner or loser
   const playerList = [...store.get().players];
   const [gameResult, setGameResult] = useState(null);
-  console.log("playerList", playerList);
-
-  useEffect(() => {
-    console.log("useeffect");
-
-    if (playerList.length === 1) {
-      setGameResult({
-        type: "win",
-        username: playerList[0].username
-      });
-      ws.send(JSON.stringify({
-        type: "you-lose",
-        roomId: ws.roomId,
-        username: playerList[0].username,
-      }))
-    }
-  }, [playerList]);
 
 
   const sendMsg = (e) => {
@@ -271,17 +254,21 @@ export function game() {
           return newGrid;
         });
       }
-      if (data.type == "you-lose") {
-        console.log("lose");
-
-        if (data.username == ws.username) {
-          return;
+      if (data.type === "game-over") {
+        console.log("game over", data);
+        if (data.winner === ws.username) {
+          setGameResult({
+            type: "win",
+            username: ws.username
+          });
+        } else {
+          setGameResult({
+            type: "lose",
+            username: data.winner
+          });
         }
-        setGameResult({
-          type: "lose",
-          username: data.username
-        });
       }
+
     };
 
 
@@ -797,8 +784,23 @@ export function game() {
     loop(0);
   }, []);
 
-  return gameResult ? jsx("div", { className: "winner-announcement" }, gameResult.type === "win" ? jsx("div", null, `🎉 Congratulations ${gameResult.username}, You Win! 🎉`) : jsx("div", null, `💀 Sorry ${gameResult.username}, You Lose! 💀`)) :
-    jsx(
+  return gameResult ?
+    jsx("div", { className: "game-result" },
+      jsx("div", { className: "result-content" },
+        jsx("div", { className: "result-icon" },
+          gameResult.type === "win" ? "🎉" : "💀"
+        ),
+        jsx("div", { className: "result-message" },
+          gameResult.type === "win"
+            ? `Congratulations ${ws.username}, You Win!`
+            : `Sorry ${ws.username}, You Lose!`
+        ),
+        jsx("button", {
+          className: "replay-button",
+          onClick: () => window.location.reload()
+        }, "Rejouer")
+      )
+    ) : jsx(
       "div",
       {
         className: "game-container",
@@ -818,7 +820,6 @@ export function game() {
       jsx(
         "div",
         { className: "game-hud-container" },
-        // dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
         jsx(
           "div",
           { className: "hud-section player-info" },
