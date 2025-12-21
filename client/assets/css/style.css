@@ -751,7 +751,7 @@ p[style*="color: red"],
 }
 
 .player0 {
-  background-image: url("../images/c1.png");
+  background-image: url("../images/player0.png");
 }
 
 .player1 {
@@ -759,11 +759,11 @@ p[style*="color: red"],
 }
 
 .player2 {
-  background-image: url("../images/player1.png");
+  background-image: url("../images/player2.png");
 }
 
 .player3 {
-  background-image: url("../images/player1.png");
+  background-image: url("../images/player3.png");
 }
 
 .player-label {
