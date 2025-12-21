@@ -29,11 +29,75 @@ const tileTypes = {
   9: "power",
 };
 
+// --- PHYSICS HELPER (Matches Server Logic) ---
+function checkCollision(map, targetX, targetY, currentX, currentY) {
+  const TILE_SIZE = 50;
+  const HITBOX = { x: 16, y: 40, w: 32, h: 20 };
+
+  const points = {
+    tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
+    tr: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y },
+    bl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y + HITBOX.h },
+    br: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y + HITBOX.h },
+  };
+
+  const collisions = {};
+  let hasCollision = false;
+
+  for (const key in points) {
+    const point = points[key];
+    const tileX = Math.floor(point.x / TILE_SIZE);
+    const tileY = Math.floor(point.y / TILE_SIZE);
+
+    let isBlocked = false;
+
+    if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
+      isBlocked = true;
+    } else {
+      const row = map[tileY];
+      const cell = row ? row[tileX] : 1;
+      if ([1, 2, 3, 4].includes(cell)) {
+        isBlocked = true;
+      } else if (cell === 5) {
+        if (currentX !== null && currentY !== null) {
+          const playerRect = {
+            left: currentX + HITBOX.x,
+            right: currentX + HITBOX.x + HITBOX.w,
+            top: currentY + HITBOX.y,
+            bottom: currentY + HITBOX.y + HITBOX.h,
+          };
+          const bombRect = {
+            left: tileX * TILE_SIZE,
+            right: (tileX + 1) * TILE_SIZE,
+            top: tileY * TILE_SIZE,
+            bottom: (tileY + 1) * TILE_SIZE,
+          };
+          const isOverlapping =
+            playerRect.left < bombRect.right &&
+            playerRect.right > bombRect.left &&
+            playerRect.top < bombRect.bottom &&
+            playerRect.bottom > bombRect.top;
+          if (!isOverlapping) isBlocked = true;
+        } else {
+          isBlocked = true;
+        }
+      }
+    }
+    collisions[key] = isBlocked;
+    if (isBlocked) hasCollision = true;
+  }
+  return { hasCollision, collisions };
+}
+
+function lerp(start, end, t) {
+  return start * (1 - t) + end * t;
+}
+
 export function game() {
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
-  const [speed, setspeed] = useState(1);
+  const [speedLevel, setSpeedLevel] = useState(1);
   const [bombs, setBombs] = useState(1);
   const [bombRange, setBombRange] = useState(1);
   const [Timer, setTimer] = useState("00:00");
@@ -41,23 +105,49 @@ export function game() {
   const [gameResult, setGameResult] = useState(null);
 
   const bombElementsRef = useRef(new Map());
-  const bombTimersRef = useRef(new Map()); // <--- ADD THIS
+  const bombTimersRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
-
-  const map = store.get().map;
-  const players = store.get().players;
-  const [grid, setGrid] = useState(map);
   const mapRef = useRef(null);
 
-  // FIXED: Set initial CSS positions to 0,0.
-  // We rely completely on translate3d from the server coordinates.
-  const [playerPosition, setPlayerPosition] = useState({
-    0: { top: "50px", left: "50px" },
-    1: { top: "50px", left: "650px" },
-    2: { top: "650px", left: "50px" },
-    3: { top: "650px", left: "650px" },
-  });
+  const map = store.get().map;
+  const playersList = store.get().players;
+  const [grid, setGrid] = useState(map);
+  const latestGridRef = useRef(map);
 
+  const playerStateRef = useRef(
+    playersList.map((p, i) => {
+      // FIX: Exact spawn coordinates matching server (TileCenter - Offset)
+      const T1 = 75;
+      const T13 = 13 * 50 + 25; // 675
+      const offX = 32;
+      const offY = 50;
+
+      const spawns = [
+        { x: T1 - offX, y: T1 - offY }, // TL (43, 25)
+        { x: T13 - offX, y: T1 - offY }, // TR (643, 25)
+        { x: T13 - offX, y: T13 - offY }, // BR (643, 625)
+        { x: T1 - offX, y: T13 - offY }, // BL (43, 625)
+      ];
+      const start = spawns[i] || { x: 0, y: 0 };
+      return {
+        x: start.x,
+        y: start.y,
+        targetX: start.x,
+        targetY: start.y,
+        direction: "down",
+        isMoving: false,
+        frame: 0,
+        animTime: 0,
+      };
+    })
+  );
+
+  const inputsRef = useRef({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+  });
   const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const [scale, setScale] = useState(1);
 
@@ -67,34 +157,40 @@ export function game() {
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
-  const movingState = useRef({});
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
-    ws.send(JSON.stringify({ type: "message", msg }));
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: "message", msg }));
     setMsg("");
     e.target.value = "";
     if (e.key != "Enter") e.target.previousSibling.value = "";
   };
 
   function placeBomb() {
-    ws.send(JSON.stringify({ type: "place-bomb", roomId: ws.roomId }));
+    if (ws.readyState === 1)
+      ws.send(JSON.stringify({ type: "place-bomb", roomId: ws.roomId }));
   }
 
   function handleKeyDown(e) {
-    if (FRAMES[e.key] && !e.repeat)
-      ws.send(JSON.stringify({ type: "input", key: e.key, state: true }));
+    if (FRAMES[e.key] && !e.repeat) {
+      inputsRef.current[e.key] = true;
+      if (ws.readyState === 1)
+        ws.send(JSON.stringify({ type: "input", key: e.key, state: true }));
+    }
     if (e.key === " " && !e.repeat) placeBomb();
   }
 
   function handleKeyUp(e) {
-    if (FRAMES[e.key])
-      ws.send(JSON.stringify({ type: "input", key: e.key, state: false }));
+    if (FRAMES[e.key]) {
+      inputsRef.current[e.key] = false;
+      if (ws.readyState === 1)
+        ws.send(JSON.stringify({ type: "input", key: e.key, state: false }));
+    }
   }
 
   useEffect(() => {
     let obj = { min: 0, sec: 0 };
-    setInterval(() => {
+    const timerInterval = setInterval(() => {
       obj.sec++;
       if (obj.sec === 60) {
         obj.min++;
@@ -109,56 +205,53 @@ export function game() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
       if (data.type === "message")
         setChat((prev) => [
           ...prev,
           { username: data.username, msg: data.msg },
         ]);
       if (data.type === "grid-update") {
-        
-        setGrid(data.map)};
+        setGrid(data.map);
+        latestGridRef.current = data.map;
+      }
       if (data.type === "stats-update") {
         setLives(data.stats.lives);
         setBombs(data.stats.maxBombs);
         setBombRange(data.stats.range);
-        setspeed(data.stats.speedLevel);
+        setSpeedLevel(data.stats.speedLevel);
       }
+
       if (data.type === "players-sync") {
         data.moves.forEach((move) => {
           const index = store
             .get()
             .players.findIndex((p) => p.username === move.username);
           if (index === -1) return;
-          const el = playersRef[index]?.current;
 
-          if (!movingState.current[move.username])
-            movingState.current[move.username] = { frame: 0, time: 0 };
-          const anim = movingState.current[move.username];
+          const pState = playerStateRef.current[index];
+          const isMe = move.username === ws.username;
 
-          if (el) {
-            // FIXED: Removed -25px offset. We trust server coordinates directly.
-            el.style.transform = `translate3d(${move.x}px, ${move.y}px, 0)`;
-
-            if (move.isMoving) {
-              let key = "ArrowDown";
-              if (move.direction === "up") key = "ArrowUp";
-              if (move.direction === "left") key = "ArrowLeft";
-              if (move.direction === "right") key = "ArrowRight";
-
-              const def = FRAMES[key];
-              const frameX = def.col[anim.frame] * 64;
-              const frameY = def.row * 64;
-              el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-
-              anim.time += 50;
-              if (anim.time > 80) {
-                anim.frame = (anim.frame + 1) % def.col.length;
-                anim.time = 0;
-              }
+          if (isMe) {
+            // RECONCILIATION: RELAXED THRESHOLD TO 5px
+            const dist = Math.hypot(pState.x - move.x, pState.y - move.y);
+            if (dist > 15) {
+              pState.x = move.x;
+              pState.y = move.y;
+            } else if (dist > 5) {
+              pState.x = lerp(pState.x, move.x, 0.2);
+              pState.y = lerp(pState.y, move.y, 0.2);
             }
+          } else {
+            pState.targetX = move.x;
+            pState.targetY = move.y;
+            pState.direction = move.direction;
+            // FIX: Sync isMoving state directly from server to stop ghost animations
+            pState.isMoving = move.isMoving;
           }
         });
       }
+
       if (data.type == "player-dead") {
         const index = store
           .get()
@@ -172,6 +265,7 @@ export function game() {
           type: data.type === "you-win" ? "win" : "lose",
           username: data.username,
         });
+        clearInterval(timerInterval);
       }
     };
 
@@ -182,55 +276,145 @@ export function game() {
         setScale(1);
         return;
       }
-      const newScale = Math.min(
-        window.innerWidth / width,
-        window.innerHeight / height
+      setScale(
+        Math.min(window.innerWidth / width, window.innerHeight / height)
       );
-      setScale(newScale);
     }
     handleResize();
     window.addEventListener("resize", handleResize);
-    let lastTimeStamp = 0;
-    let frame = {};
-    // ANIMATION LOOP
+
+    let lastTime = 0;
     function loop(timeStamp) {
       if (dead) return;
-      const delta = timeStamp - lastTimeStamp;
-      lastTimeStamp = timeStamp;
-      if (bombElementsRef.current.length === 0) {
-        frame = {};
-      }
-      // --- BOMBS ---
-      bombElementsRef.current.forEach((el, key) => {
-        if (el) {
-          let startTime = bombTimersRef.current.get(key);
+      const deltaTime = timeStamp - lastTime;
+      lastTime = timeStamp;
 
-          if (!startTime) {
-            
-            startTime = 0;
-            bombTimersRef.current.set(key, startTime);
+      playersRef.forEach((ref, i) => {
+        if (!ref.current) return;
+        const pState = playerStateRef.current[i];
+        const playerInfo = store.get().players[i];
+        if (!playerInfo) return;
+
+        const isMe = playerInfo.username === ws.username;
+
+        if (isMe) {
+          const speedVal = 6 + speedLevel * 1.5;
+          const pixelPerMs = speedVal / 50;
+          const moveDist = pixelPerMs * deltaTime;
+
+          let moving = false;
+          const currentMap = latestGridRef.current;
+
+          const STEPS = Math.ceil(moveDist / 4);
+          const stepDist = moveDist / STEPS;
+
+          for (let s = 0; s < STEPS; s++) {
+            if (inputsRef.current.ArrowUp) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x,
+                pState.y - stepDist,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.y -= stepDist;
+              } else {
+                if (collisions.tl && !collisions.tr) pState.x += stepDist;
+                else if (collisions.tr && !collisions.tl) pState.x -= stepDist;
+              }
+              pState.direction = "up";
+              moving = true;
+            } else if (inputsRef.current.ArrowDown) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x,
+                pState.y + stepDist,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.y += stepDist;
+              } else {
+                if (collisions.bl && !collisions.br) pState.x += stepDist;
+                else if (collisions.br && !collisions.bl) pState.x -= stepDist;
+              }
+              pState.direction = "down";
+              moving = true;
+            } else if (inputsRef.current.ArrowLeft) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x - stepDist,
+                pState.y,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.x -= stepDist;
+              } else {
+                if (collisions.tl && !collisions.bl) pState.y += stepDist;
+                else if (collisions.bl && !collisions.tl) pState.y -= stepDist;
+              }
+              pState.direction = "left";
+              moving = true;
+            } else if (inputsRef.current.ArrowRight) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x + stepDist,
+                pState.y,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.x += stepDist;
+              } else {
+                if (collisions.tr && !collisions.br) pState.y += stepDist;
+                else if (collisions.br && !collisions.tr) pState.y -= stepDist;
+              }
+              pState.direction = "right";
+              moving = true;
+            }
           }
-          if (!frame[key]) {
-            frame[key] = 0;
-          }
-          bombTimersRef.current.set(key, startTime + delta);
+          pState.isMoving = moving;
+        } else {
+          pState.x = lerp(pState.x, pState.targetX, 0.2);
+          pState.y = lerp(pState.y, pState.targetY, 0.2);
+        }
 
+        ref.current.style.transform = `translate3d(${pState.x}px, ${pState.y}px, 0)`;
 
-          // CHANGE: Use 600ms.
-          // 600ms * 4 frames = 2400ms total.
-          // This ensures the animation finishes before the server (3000ms) explodes it.
+        if (pState.isMoving) {
+          let key = "ArrowDown";
+          if (pState.direction === "up") key = "ArrowUp";
+          if (pState.direction === "left") key = "ArrowLeft";
+          if (pState.direction === "right") key = "ArrowRight";
 
-          if (frame[key] == 0 || startTime + delta >= 750) {
-            bombTimersRef.current.set(key, 0);
+          const def = FRAMES[key];
+          const frameX = def.col[pState.frame] * 64;
+          const frameY = def.row * 64;
+          ref.current.style.backgroundPosition = `-${frameX}px -${frameY}px`;
 
-            el.style.backgroundPosition = `-${frame[key] * 50}px`;
-
-            frame[key] += 1;
+          pState.animTime += deltaTime;
+          if (pState.animTime > 80) {
+            pState.frame = (pState.frame + 1) % def.col.length;
+            pState.animTime = 0;
           }
         }
       });
 
-      // --- EXPLOSIONS ---
+      bombElementsRef.current.forEach((el, key) => {
+        if (el) {
+          let startTime = bombTimersRef.current.get(key);
+          if (!startTime) {
+            startTime = timeStamp;
+            bombTimersRef.current.set(key, startTime);
+          }
+          const age = timeStamp - startTime;
+          const frame = Math.min(Math.floor(age / 600), 3);
+          el.style.backgroundPosition = `-${frame * 50}px`;
+        }
+      });
+
       const expFrame = Math.floor(timeStamp / 100) % 5;
       explosionElementsRef.current.forEach((el) => {
         if (el) el.style.backgroundPosition = `-${expFrame * 50}px -150px`;
@@ -277,7 +461,7 @@ export function game() {
             jsx(
               "div",
               { className: "hud-value player-name" },
-              ws.username || "jdab"
+              ws.username || "Guest"
             )
           ),
           jsx(
@@ -334,7 +518,7 @@ export function game() {
                 "div",
                 { className: "stat-info" },
                 jsx("div", { className: "stat-label" }, "SPEED"),
-                jsx("div", { className: "stat-value" }, speed)
+                jsx("div", { className: "stat-value" }, speedLevel)
               )
             )
           ),
@@ -355,16 +539,16 @@ export function game() {
           jsx(
             "div",
             { className: "map-container", ref: mapRef },
-            ...players.map((p, i) => {
+            ...playersList.map((p, i) => {
               const Me = p.username == ws.username;
               return jsx(
                 "div",
                 {
                   className: `player player${i}`,
                   style: {
-                    transform: `translate3d(${playerPosition[i]?.top}px, ${playerPosition[i]?.left}px, 0)`,
                     top: "0px",
                     left: "0px",
+                    transform: "translate3d(0,0,0)",
                   },
                   key: `${p.username}`,
                   ref: playersRef[i],
@@ -418,16 +602,8 @@ export function game() {
                           ref: (el) => {
                             const key = `${rowIndex}-${colIndex}`;
                             if (el) {
-                              // 1. Store the DOM element
                               bombElementsRef.current.set(key, el);
-                              // 2. Store the creation time ONLY if we haven't seen this bomb yet
-                              if (!bombTimersRef.current.has(key)) {
-                                
-                                bombTimersRef.current.set(key, 0);
-                              }
                             } else {
-                              // Bomb removed (exploded): Clean up both
-                              
                               bombElementsRef.current.delete(key);
                               bombTimersRef.current.delete(key);
                             }
@@ -465,7 +641,6 @@ export function game() {
           jsx(
             "div",
             { className: "chat-section-game" },
-            jsx("h3", null, "Game Chat"),
             jsx(
               "div",
               { className: "chat-messages" },

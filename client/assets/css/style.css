@@ -747,6 +747,7 @@ p[style*="color: red"],
   background-repeat: no-repeat;
   image-rendering: pixelated;
   transform: translate3d(0px, -25px, 0px);
+  z-index: 200;
 }
 
 .player0 {

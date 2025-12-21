@@ -39,6 +39,7 @@ export function Join() {
             type: "text",
             placeholder: "Enter your warrior name...",
             value: name,
+            autofocus: true,
             oninput: (e) => setName(e.target.value),
             onkeypress: (e) => e.key === 'Enter' && handleJoin(e),
             maxlength: "15"

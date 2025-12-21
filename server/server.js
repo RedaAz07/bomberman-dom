@@ -6,7 +6,7 @@ import { generateMap } from "./generateMap.js";
 
 const PORT = 3000;
 const TILE_SIZE = 50;
-const GAME_TICK = 50;
+const GAME_TICK = 20; // 50 ticks per second (Smooth)
 const MOVEMENT_SPEED = 6;
 
 const TILES = {
@@ -37,6 +37,7 @@ function createRoom() {
     gameState: {
       bombs: [],
       explosions: [],
+      giftsToExplosion: [],
       active: false,
     },
     gameInterval: null,
@@ -85,18 +86,11 @@ function startGameTimer(room) {
 function startGame(room) {
   room.gameState.active = true;
 
-  // Configuration to center the player visually on the tile center
-  // Tile Center (1,1) is at 75px, 75px.
-  // We want the HITBOX CENTER to align with TILE CENTER.
-  // Hitbox Center X relative to Sprite = 16 + (32/2) = 32.
-  // Hitbox Center Y relative to Sprite = 40 + (20/2) = 50.
-
   const spriteOffsetX = 32;
   const spriteOffsetY = 50;
 
   room.players.forEach((p, index) => {
     // 1. Calculate Grid Coordinates for spawns
-    // TL (1,1), TR (13,1), BR (13,13), BL (1,13)
     let tileX = 1;
     let tileY = 1;
 
@@ -114,12 +108,12 @@ function startGame(room) {
     } // BL
 
     // 2. Convert Grid to Pixel Center
-    const centerX = tileX * TILE_SIZE + TILE_SIZE / 2; // e.g., 75
-    const centerY = tileY * TILE_SIZE + TILE_SIZE / 2; // e.g., 75
+    const centerX = tileX * TILE_SIZE + TILE_SIZE / 2;
+    const centerY = tileY * TILE_SIZE + TILE_SIZE / 2;
 
     // 3. Apply Offset to get Top-Left of Sprite
-    const startX = centerX - spriteOffsetX; // 75 - 32 = 43
-    const startY = centerY - spriteOffsetY; // 75 - 50 = 25
+    const startX = centerX - spriteOffsetX;
+    const startY = centerY - spriteOffsetY;
 
     p.stats = {
       lives: 3,
@@ -138,6 +132,8 @@ function startGame(room) {
       ArrowLeft: false,
       ArrowRight: false,
     };
+    // Initialize sync state
+    p.lastSync = { x: startX, y: startY, isMoving: false };
 
     p.socket.send(JSON.stringify({ type: "stats-update", stats: p.stats }));
   });
@@ -154,105 +150,127 @@ function startGame(room) {
 function updateGame(room) {
   const now = Date.now();
   let gridChanged = false;
-  let positionsChanged = false;
+  let shouldBroadcast = false; // Changed from 'positionsChanged'
   const grid = room.map;
 
-  // 1. PROCESS MOVEMENT WITH SLIDING
+  // 1. PROCESS MOVEMENT
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
 
-    const moveSpeed = MOVEMENT_SPEED + p.stats.speedLevel * 1.5;
+    const speedPer50ms = MOVEMENT_SPEED + p.stats.speedLevel * 1.5;
+    const pixelsPerMs = speedPer50ms / 50;
+    const moveDist = pixelsPerMs * GAME_TICK;
 
-    // ARROW UP
-    if (p.inputs.ArrowUp) {
-      // Pass p.stats.x, p.stats.y as the 4th and 5th arguments
-      const { hasCollision, collisions } = checkCollision(
-        room,
-        p.stats.x,
-        p.stats.y - moveSpeed,
-        p.stats.x,
-        p.stats.y
-      );
-      if (!hasCollision) {
-        p.stats.y -= moveSpeed;
-      } else {
-        if (collisions.tl && !collisions.tr) p.stats.x += moveSpeed;
-        else if (collisions.tr && !collisions.tl) p.stats.x -= moveSpeed;
+    const STEPS = Math.ceil(moveDist / 4);
+    const stepSpeed = moveDist / STEPS;
+
+    for (let i = 0; i < STEPS; i++) {
+      if (p.inputs.ArrowUp) {
+        const { hasCollision, collisions } = checkCollision(
+          room,
+          p.stats.x,
+          p.stats.y - stepSpeed,
+          p.stats.x,
+          p.stats.y
+        );
+        if (!hasCollision) {
+          p.stats.y -= stepSpeed;
+        } else {
+          if (collisions.tl && !collisions.tr) p.stats.x += stepSpeed;
+          else if (collisions.tr && !collisions.tl) p.stats.x -= stepSpeed;
+        }
+      } else if (p.inputs.ArrowDown) {
+        const { hasCollision, collisions } = checkCollision(
+          room,
+          p.stats.x,
+          p.stats.y + stepSpeed,
+          p.stats.x,
+          p.stats.y
+        );
+        if (!hasCollision) {
+          p.stats.y += stepSpeed;
+        } else {
+          if (collisions.bl && !collisions.br) p.stats.x += stepSpeed;
+          else if (collisions.br && !collisions.bl) p.stats.x -= stepSpeed;
+        }
+      } else if (p.inputs.ArrowLeft) {
+        const { hasCollision, collisions } = checkCollision(
+          room,
+          p.stats.x - stepSpeed,
+          p.stats.y,
+          p.stats.x,
+          p.stats.y
+        );
+        if (!hasCollision) {
+          p.stats.x -= stepSpeed;
+        } else {
+          if (collisions.tl && !collisions.bl) p.stats.y += stepSpeed;
+          else if (collisions.bl && !collisions.tl) p.stats.y -= stepSpeed;
+        }
+      } else if (p.inputs.ArrowRight) {
+        const { hasCollision, collisions } = checkCollision(
+          room,
+          p.stats.x + stepSpeed,
+          p.stats.y,
+          p.stats.x,
+          p.stats.y
+        );
+        if (!hasCollision) {
+          p.stats.x += stepSpeed;
+        } else {
+          if (collisions.tr && !collisions.br) p.stats.y += stepSpeed;
+          else if (collisions.br && !collisions.tr) p.stats.y -= stepSpeed;
+        }
       }
-      positionsChanged = true;
     }
-    // ARROW DOWN
-    else if (p.inputs.ArrowDown) {
-      const { hasCollision, collisions } = checkCollision(
-        room,
-        p.stats.x,
-        p.stats.y + moveSpeed,
-        p.stats.x,
-        p.stats.y
-      );
-      if (!hasCollision) {
-        p.stats.y += moveSpeed;
-      } else {
-        if (collisions.bl && !collisions.br) p.stats.x += moveSpeed;
-        else if (collisions.br && !collisions.bl) p.stats.x -= moveSpeed;
-      }
-      positionsChanged = true;
+
+    // --- CHECK FOR SYNC ---
+    // Calculate current movement status based on keys
+    const isMoving =
+      p.inputs.ArrowUp ||
+      p.inputs.ArrowDown ||
+      p.inputs.ArrowLeft ||
+      p.inputs.ArrowRight;
+
+    // Check if anything changed since last broadcast (Position OR Animation State)
+    if (!p.lastSync)
+      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
+
+    // Broadcast if: Position Changed OR 'isMoving' status changed (e.g. stopped pressing keys)
+    if (
+      Math.abs(p.stats.x - p.lastSync.x) > 0.1 ||
+      Math.abs(p.stats.y - p.lastSync.y) > 0.1 ||
+      isMoving !== p.lastSync.isMoving
+    ) {
+      shouldBroadcast = true;
     }
-    // ARROW LEFT
-    else if (p.inputs.ArrowLeft) {
-      const { hasCollision, collisions } = checkCollision(
-        room,
-        p.stats.x - moveSpeed,
-        p.stats.y,
-        p.stats.x,
-        p.stats.y
-      );
-      if (!hasCollision) {
-        p.stats.x -= moveSpeed;
-      } else {
-        if (collisions.tl && !collisions.bl) p.stats.y += moveSpeed;
-        else if (collisions.bl && !collisions.tl) p.stats.y -= moveSpeed;
-      }
-      positionsChanged = true;
-    }
-    // ARROW RIGHT
-    else if (p.inputs.ArrowRight) {
-      const { hasCollision, collisions } = checkCollision(
-        room,
-        p.stats.x + moveSpeed,
-        p.stats.y,
-        p.stats.x,
-        p.stats.y
-      );
-      if (!hasCollision) {
-        p.stats.x += moveSpeed;
-      } else {
-        if (collisions.tr && !collisions.br) p.stats.y += moveSpeed;
-        else if (collisions.br && !collisions.tr) p.stats.y -= moveSpeed;
-      }
-      positionsChanged = true;
-    }
-    positionsChanged = true;
   });
 
-  if (positionsChanged) {
-    const moves = room.players.map((p) => ({
-      username: p.username,
-      x: p.stats.x,
-      y: p.stats.y,
-      direction: p.inputs.ArrowUp
-        ? "up"
-        : p.inputs.ArrowDown
-        ? "down"
-        : p.inputs.ArrowLeft
-        ? "left"
-        : "right",
-      isMoving:
+  if (shouldBroadcast) {
+    const moves = room.players.map((p) => {
+      const isMoving =
         p.inputs.ArrowUp ||
         p.inputs.ArrowDown ||
         p.inputs.ArrowLeft ||
-        p.inputs.ArrowRight,
-    }));
+        p.inputs.ArrowRight;
+
+      // Update the sync tracker
+      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving };
+
+      return {
+        username: p.username,
+        x: p.stats.x,
+        y: p.stats.y,
+        direction: p.inputs.ArrowUp
+          ? "up"
+          : p.inputs.ArrowDown
+          ? "down"
+          : p.inputs.ArrowLeft
+          ? "left"
+          : "right",
+        isMoving: isMoving, // Send this to client
+      };
+    });
     broadcastRoom(room, { type: "players-sync", moves });
   }
 
@@ -277,7 +295,20 @@ function updateGame(room) {
     if (now - exp.creationTime > 500) {
       explosionsToDelete.push(idx);
       if (grid[exp.y][exp.x] === TILES.EXPLOSION) {
-        grid[exp.y][exp.x] = TILES.GRASS;
+        if (room.gameState.giftsToExplosion.length > 0) {
+          const giftIndex = room.gameState.giftsToExplosion.findIndex(
+            (g) => g.x === exp.x && g.y === exp.y
+          );
+          if (giftIndex !== -1) {
+            grid[exp.y][exp.x] =
+              room.gameState.giftsToExplosion[giftIndex].cell;
+            room.gameState.giftsToExplosion.splice(giftIndex, 1);
+          } else {
+            grid[exp.y][exp.x] = TILES.GRASS;
+          }
+        } else {
+          grid[exp.y][exp.x] = TILES.GRASS;
+        }
         gridChanged = true;
       }
     }
@@ -285,6 +316,7 @@ function updateGame(room) {
   for (let i = explosionsToDelete.length - 1; i >= 0; i--) {
     room.gameState.explosions.splice(explosionsToDelete[i], 1);
   }
+
   // 4. INTERACTIONS
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
@@ -308,9 +340,9 @@ function updateGame(room) {
       }
     }
     if (tile >= 7 && tile <= 9) {
-      if (tile === 7 && p.stats.speedLevel < 5) p.stats.speedLevel++;
-      if (tile === 8 && p.stats.range < 5) p.stats.range++;
-      if (tile === 9 && p.stats.maxBombs < 5) p.stats.maxBombs++;
+      if (tile === 7 && p.stats.speedLevel < 4) p.stats.speedLevel++;
+      if (tile === 8 && p.stats.range < 4) p.stats.range++;
+      if (tile === 9 && p.stats.maxBombs < 4) p.stats.maxBombs++;
       grid[tileY][tileX] = TILES.GRASS;
       gridChanged = true;
       p.socket.send(JSON.stringify({ type: "stats-update", stats: p.stats }));
@@ -327,9 +359,7 @@ function checkCollision(
   currentX = null,
   currentY = null
 ) {
-  // FEET HITBOX (same as previous fix)
   const HITBOX = { x: 16, y: 40, w: 32, h: 20 };
-
   const points = {
     tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
     tr: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y },
@@ -346,62 +376,43 @@ function checkCollision(
     const tileY = Math.floor(point.y / TILE_SIZE);
 
     let isBlocked = false;
-
     if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
       isBlocked = true;
     } else {
       const cell = room.map[tileY][tileX];
-
-      // STANDARD OBSTACLES (Wall, Crate, Corner, Stone)
       if ([1, 2, 3, 4].includes(cell)) {
         isBlocked = true;
-      }
-      // BOMB LOGIC (5)
-      else if (cell === 5) {
-        // If we provided current coordinates, check if we are "stuck" inside this bomb
+      } else if (cell === 5) {
         if (currentX !== null && currentY !== null) {
-          // Calculate current player feet rectangle
           const playerRect = {
             left: currentX + HITBOX.x,
             right: currentX + HITBOX.x + HITBOX.w,
             top: currentY + HITBOX.y,
             bottom: currentY + HITBOX.y + HITBOX.h,
           };
-
-          // Calculate the bomb tile rectangle
           const bombRect = {
             left: tileX * TILE_SIZE,
             right: (tileX + 1) * TILE_SIZE,
             top: tileY * TILE_SIZE,
             bottom: (tileY + 1) * TILE_SIZE,
           };
-
-          // Check for Intersection:
-          // If the player is CURRENTLY inside the bomb, allow them to move (isBlocked = false).
-          // If they are NOT inside (approaching from outside), block them (isBlocked = true).
           const isOverlapping =
             playerRect.left < bombRect.right &&
             playerRect.right > bombRect.left &&
             playerRect.top < bombRect.bottom &&
             playerRect.bottom > bombRect.top;
-
-          if (isOverlapping) {
-            isBlocked = false; // Walk through it
-          } else {
-            isBlocked = true; // Hit it like a wall
-          }
+          if (!isOverlapping) isBlocked = true;
         } else {
-          // If no current position passed, assume solid
           isBlocked = true;
         }
       }
     }
-
     collisions[key] = isBlocked;
     if (isBlocked) hasCollision = true;
   }
   return { hasCollision, collisions };
 }
+
 function handleExplosion(room, bomb) {
   const grid = room.map;
   const { x, y, range } = bomb;
@@ -411,6 +422,16 @@ function handleExplosion(room, bomb) {
     if (tx < 0 || ty < 0 || ty >= 15 || tx >= 15) return true;
     const cell = grid[ty][tx];
     if ([TILES.WALL, TILES.CORNER, TILES.STONE].includes(cell)) return true;
+    if (cell === TILES.BOMB) {
+      const chainedBomb = room.gameState.bombs.find((b => b.x === tx && b.y === ty));
+      if (chainedBomb) {
+        handleExplosion(room, chainedBomb);
+        room.gameState.bombs = room.gameState.bombs.filter(b => b !== chainedBomb);
+        const owner = room.players.find((p) => p.username === chainedBomb.owner);
+        if (owner) owner.stats.activeBombs--;
+      }
+      return true;
+    }
 
     if (cell === TILES.CRATE) {
       const loot =
@@ -423,13 +444,15 @@ function handleExplosion(room, bomb) {
           if (room.gameState.active && room.map[ty][tx] === TILES.GRASS) {
             room.map[ty][tx] = loot;
             broadcastRoom(room, { type: "grid-update", map: room.map });
-          }          
+          }
         }, 550);
       }
       room.gameState.explosions.push({ x: tx, y: ty, creationTime: now });
       return true;
     }
-
+    if (cell >= TILES.SPEED && cell <= TILES.POWER) {
+      room.gameState.giftsToExplosion.push({ x: tx, y: ty, cell });
+    }
     grid[ty][tx] = TILES.EXPLOSION;
     room.gameState.explosions.push({ x: tx, y: ty, creationTime: now });
     return false;
@@ -464,10 +487,7 @@ function checkWinCondition(room) {
   }
 }
 
-/* -------------------- FILE SERVER -------------------- */
-
 const base = path.join(process.cwd(), "..", "client");
-
 const mime = {
   ".html": "text/html",
   ".css": "text/css",
@@ -477,13 +497,11 @@ const mime = {
   ".webp": "image/webp",
   ".json": "application/json",
 };
-
 const Routes = ["/", "/map", "/lobby"];
 
 const server = createServer(async (req, res) => {
   try {
     let reqPath;
-
     if (req.url === "/") {
       reqPath = "index.html";
     } else {
@@ -494,15 +512,11 @@ const server = createServer(async (req, res) => {
         reqPath = cleanUrl;
       }
     }
-
     const fullPath = path.join(base, reqPath);
-
     const ext = path.extname(fullPath);
     const type = mime[ext] || "text/plain";
     const isBinary = type.startsWith("image/");
-
     const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
-
     res.writeHead(200, { "Content-Type": type });
     res.end(content);
   } catch (err) {
@@ -553,18 +567,12 @@ wss.on("connection", (socket) => {
 
     if (data.type === "place-bomb" && player && !player.stats.isDead) {
       if (player.stats.activeBombs < player.stats.maxBombs) {
-        // OLD: const bx = Math.round((player.stats.x + 32) / 50);
-
-        // NEW: Calculate based on Feet Center (Hitbox Center)
-        // This ensures the bomb drops on the tile the feet are touching
-        const hitBoxCenterX = player.stats.x + 32; // Offset X + Width/2
-        const hitBoxCenterY = player.stats.y + 50; // Offset Y + Height/2
-
+        const hitBoxCenterX = player.stats.x + 32;
+        const hitBoxCenterY = player.stats.y + 50;
         const bx = Math.floor(hitBoxCenterX / TILE_SIZE);
         const by = Math.floor(hitBoxCenterY / TILE_SIZE);
 
         if (room.map[by] && room.map[by][bx] === TILES.GRASS) {
-          // ... rest of bomb placement logic
           room.map[by][bx] = TILES.BOMB;
           player.stats.activeBombs++;
           room.gameState.bombs.push({
