@@ -52,6 +52,17 @@ function findOrCreateRoom() {
   return room;
 }
 
+function stopTimer(room) {
+  if (room.timer) clearInterval(room.timer);
+  room.timer = null;
+  room.timeLeft = null;
+
+  broadcastRoom(room, {
+    type: "counter",
+    timeLeft: null,
+  });
+}
+
 function broadcastRoom(room, obj) {
   const msg = JSON.stringify(obj);
   for (const p of room.players) {
@@ -63,14 +74,26 @@ function broadcastRoom(room, obj) {
 
 // --- TIMER ---
 function startGameTimer(room) {
-  if (room.players.length === 2) room.timeLeft = 1;
+  if (room.players.length === 2) room.timeLeft = 30;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
 
   room.timer = setInterval(() => {
     room.timeLeft--;
-    broadcastRoom(room, { type: "counter", timeLeft: room.timeLeft });
+    if (room.timeLeft <= 10) {
+      broadcastRoom(room, {
+        type: "counter",
+        timeLeft: room.timeLeft,
+      })
+    } else {
+      broadcastRoom(room, {
+        type: "counter",
+        timeLeft: room.timeLeft - 10,
+      });
+    }
+
+    // broadcastRoom(room, { type: "counter", timeLeft: room.timeLeft });
 
     if (room.timeLeft <= 0) {
       clearInterval(room.timer);
@@ -259,10 +282,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-          ? "down"
-          : p.inputs.ArrowLeft
-          ? "left"
-          : "right",
+            ? "down"
+            : p.inputs.ArrowLeft
+              ? "left"
+              : "right",
         isMoving: isMoving,
       };
     });
@@ -496,8 +519,6 @@ function handleExplosion(room, bomb) {
 function checkWinCondition(room) {
   const alive = room.players.filter((p) => !p.stats.isDead);
   if (alive.length === 1) {
-    console.log("hnaaaaaaaaa");
-    
     const winner = alive[0].username;
     broadcastRoom(room, {
       type: "game-over",
@@ -506,9 +527,6 @@ function checkWinCondition(room) {
     clearInterval(room.gameInterval);
     room.gameState.active = false;
   } else if (alive.length === 0) {
-
-    console.log("draw");
-    
     broadcastRoom(room, {
       type: "game-over",
       winner: "draw"
@@ -573,7 +591,7 @@ wss.on("connection", (socket) => {
       let room = findOrCreateRoom();
       if (!room || room.players.some((p) => p.username === username)) {
         return socket.send(
-          JSON.stringify({ type: "join-error", msg: "Error" })
+          JSON.stringify({ type: "join-error", msg: "Username already exist" })
         );
       }
       room.players.push({ username, socket, stats: {}, inputs: {} });
@@ -629,6 +647,14 @@ wss.on("connection", (socket) => {
   socket.on("close", () => {
     const room = rooms.find((r) => r.id === socket.roomId);
     if (room) {
+      if (room.players.length <= 1) {
+        console.log("helo");
+        stopTimer(room)
+      };
+      const player = room.players.find((p) => p.socket === socket);
+      player.stats.isDead = true;
+      broadcastRoom(room, { type: "player-dead", username: player.username });
+      checkWinCondition(room);
       room.players = room.players.filter((p) => p.socket !== socket);
       broadcastRoom(room, {
         type: "player-list",
@@ -640,5 +666,5 @@ wss.on("connection", (socket) => {
 });
 
 server.listen(PORT, () =>
-  console.log(`Server running at 10.1.1.6:${PORT}`)
+  console.log(`Server running at http://localhost:${PORT}`)
 );

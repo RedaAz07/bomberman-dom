@@ -36,6 +36,8 @@ export function Lobby() {
       }
 
       if (data.type === "counter") {
+        console.log(data,"counter data");
+        
         setSec(data.timeLeft);
       }
 
@@ -60,7 +62,7 @@ export function Lobby() {
 
     setMsg("");
     e.target.value = "";
-    e.target.previousSibling.value = ""
+    if (e.key != "Enter") e.target.previousSibling.value = "";
   };
 
   return jsx("div", { className: "container lobby-wrapper" },
