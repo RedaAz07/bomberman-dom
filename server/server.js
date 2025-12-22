@@ -264,10 +264,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-          ? "down"
-          : p.inputs.ArrowLeft
-          ? "left"
-          : "right",
+            ? "down"
+            : p.inputs.ArrowLeft
+              ? "left"
+              : "right",
         isMoving: isMoving, // Send this to client
       };
     });
@@ -332,6 +332,8 @@ function updateGame(room) {
         p.stats.lives--;
         p.stats.invulnerableUntil = now + 1000;
         p.socket.send(JSON.stringify({ type: "stats-update", stats: p.stats }));
+        broadcastRoom(room, { type: "player-hit", username: p.username, });
+
         if (p.stats.lives <= 0) {
           p.stats.isDead = true;
           broadcastRoom(room, { type: "player-dead", username: p.username });
@@ -476,15 +478,28 @@ function handleExplosion(room, bomb) {
 
 function checkWinCondition(room) {
   const alive = room.players.filter((p) => !p.stats.isDead);
-  if (alive.length <= 1 && room.players.length > 1) {
-    const winner = alive[0];
+  if (alive.length === 1) {
+    console.log("hnaaaaaaaaa");
+    
+    const winner = alive[0].username;
     broadcastRoom(room, {
-      type: "you-win",
-      username: winner ? winner.username : "Draw",
+      type: "game-over",
+      winner: winner
+    });
+    clearInterval(room.gameInterval);
+    room.gameState.active = false;
+  } else if (alive.length === 0) {
+
+    console.log("draw");
+    
+    broadcastRoom(room, {
+      type: "game-over",
+      winner: "draw"
     });
     clearInterval(room.gameInterval);
     room.gameState.active = false;
   }
+
 }
 
 const base = path.join(process.cwd(), "..", "client");
@@ -608,5 +623,5 @@ wss.on("connection", (socket) => {
 });
 
 server.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`)
+  console.log(`Server running at 10.1.1.6:${PORT}`)
 );
