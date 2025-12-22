@@ -648,20 +648,20 @@ wss.on("connection", (socket) => {
     const room = rooms.find((r) => r.id === socket.roomId);
     if (room) {
       const player = room.players.find((p) => p.socket === socket);
+      if (player) {
+        player.stats.isDead = true;
+        broadcastRoom(room, { type: "player-dead", username: player.username });
+        checkWinCondition(room);
+      }
       room.players = room.players.filter((p) => p.socket !== socket);
       broadcastRoom(room, {
         type: "player-list",
         players: room.players.map((p) => p.username),
         roomId: room.id,
       });
-      if (room.players.length <= 1) {
+      if (room.players.length <= 1) {        
         room.disponible = true;
         stopTimer(room);
-      }
-      if (player) {
-        player.stats.isDead = true;
-        broadcastRoom(room, { type: "player-dead", username: player.username });
-        checkWinCondition(room);
       }
     }
   });
