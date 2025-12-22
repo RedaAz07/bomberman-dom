@@ -19,7 +19,7 @@ export function Join() {
         }));
         setName("")
         e.target.value = ""
-        e.target.previousSibling.value = ""
+        if (e.key != "Enter") e.target.previousSibling.value = "";
     };
 
     ws.onmessage = (event) => {
