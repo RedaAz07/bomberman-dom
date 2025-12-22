@@ -150,7 +150,7 @@ function startGame(room) {
 function updateGame(room) {
   const now = Date.now();
   let gridChanged = false;
-  let shouldBroadcast = false; // Changed from 'positionsChanged'
+  let shouldBroadcast = false;
   const grid = room.map;
 
   // 1. PROCESS MOVEMENT
@@ -225,18 +225,15 @@ function updateGame(room) {
     }
 
     // --- CHECK FOR SYNC ---
-    // Calculate current movement status based on keys
     const isMoving =
       p.inputs.ArrowUp ||
       p.inputs.ArrowDown ||
       p.inputs.ArrowLeft ||
       p.inputs.ArrowRight;
 
-    // Check if anything changed since last broadcast (Position OR Animation State)
     if (!p.lastSync)
       p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
 
-    // Broadcast if: Position Changed OR 'isMoving' status changed (e.g. stopped pressing keys)
     if (
       Math.abs(p.stats.x - p.lastSync.x) > 0.1 ||
       Math.abs(p.stats.y - p.lastSync.y) > 0.1 ||
@@ -253,8 +250,6 @@ function updateGame(room) {
         p.inputs.ArrowDown ||
         p.inputs.ArrowLeft ||
         p.inputs.ArrowRight;
-
-      // Update the sync tracker
       p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving };
 
       return {
@@ -268,7 +263,7 @@ function updateGame(room) {
           : p.inputs.ArrowLeft
           ? "left"
           : "right",
-        isMoving: isMoving, // Send this to client
+        isMoving: isMoving,
       };
     });
     broadcastRoom(room, { type: "players-sync", moves });
@@ -317,7 +312,7 @@ function updateGame(room) {
     room.gameState.explosions.splice(explosionsToDelete[i], 1);
   }
 
-  // 4. INTERACTIONS
+  // 4. INTERACTIONS (UPDATED DAMAGE TIMING)
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
     const centerX = p.stats.x + 32;
@@ -328,14 +323,25 @@ function updateGame(room) {
     const tile = grid[tileY][tileX];
 
     if (tile === TILES.EXPLOSION) {
-      if (now > p.stats.invulnerableUntil) {
-        p.stats.lives--;
-        p.stats.invulnerableUntil = now + 1000;
-        p.socket.send(JSON.stringify({ type: "stats-update", stats: p.stats }));
-        if (p.stats.lives <= 0) {
-          p.stats.isDead = true;
-          broadcastRoom(room, { type: "player-dead", username: p.username });
-          checkWinCondition(room);
+      // Find the specific explosion to check its age
+      const explosion = room.gameState.explosions.find(
+        (e) => e.x === tileX && e.y === tileY
+      );
+
+      // FIX: Only apply damage if the explosion has existed for > 150ms
+      // This prevents "instant" death before the animation appears
+      if (explosion && now - explosion.creationTime > 150) {
+        if (now > p.stats.invulnerableUntil) {
+          p.stats.lives--;
+          p.stats.invulnerableUntil = now + 1000;
+          p.socket.send(
+            JSON.stringify({ type: "stats-update", stats: p.stats })
+          );
+          if (p.stats.lives <= 0) {
+            p.stats.isDead = true;
+            broadcastRoom(room, { type: "player-dead", username: p.username });
+            checkWinCondition(room);
+          }
         }
       }
     }
@@ -359,7 +365,9 @@ function checkCollision(
   currentX = null,
   currentY = null
 ) {
-  const HITBOX = { x: 16, y: 40, w: 32, h: 20 };
+  // UPDATED: Wider Hitbox (40px wide, centered on 64px sprite)
+  const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
+
   const points = {
     tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
     tr: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y },
@@ -376,13 +384,16 @@ function checkCollision(
     const tileY = Math.floor(point.y / TILE_SIZE);
 
     let isBlocked = false;
+    // Check bounds
     if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
       isBlocked = true;
     } else {
       const cell = room.map[tileY][tileX];
+      // 1=Wall, 2=Crate, 3=Corner, 4=Stone
       if ([1, 2, 3, 4].includes(cell)) {
         isBlocked = true;
       } else if (cell === 5) {
+        // Bomb Logic
         if (currentX !== null && currentY !== null) {
           const playerRect = {
             left: currentX + HITBOX.x,
@@ -401,6 +412,7 @@ function checkCollision(
             playerRect.right > bombRect.left &&
             playerRect.top < bombRect.bottom &&
             playerRect.bottom > bombRect.top;
+
           if (!isOverlapping) isBlocked = true;
         } else {
           isBlocked = true;
@@ -423,19 +435,24 @@ function handleExplosion(room, bomb) {
     const cell = grid[ty][tx];
     if ([TILES.WALL, TILES.CORNER, TILES.STONE].includes(cell)) return true;
     if (cell === TILES.BOMB) {
-      const chainedBomb = room.gameState.bombs.find((b => b.x === tx && b.y === ty));
+      const chainedBomb = room.gameState.bombs.find(
+        (b) => b.x === tx && b.y === ty
+      );
       if (chainedBomb) {
         handleExplosion(room, chainedBomb);
-        room.gameState.bombs = room.gameState.bombs.filter(b => b !== chainedBomb);
-        const owner = room.players.find((p) => p.username === chainedBomb.owner);
+        room.gameState.bombs = room.gameState.bombs.filter(
+          (b) => b !== chainedBomb
+        );
+        const owner = room.players.find(
+          (p) => p.username === chainedBomb.owner
+        );
         if (owner) owner.stats.activeBombs--;
       }
       return true;
     }
-
     if (cell === TILES.CRATE) {
       const loot =
-        Math.random() < 0.3
+        Math.random() < 0.4
           ? Math.floor(Math.random() * 3) + 7
           : TILES.EXPLOSION;
       grid[ty][tx] = TILES.EXPLOSION;

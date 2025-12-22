@@ -30,9 +30,12 @@ const tileTypes = {
 };
 
 // --- PHYSICS HELPER (Matches Server Logic) ---
+// [game.js]
+
 function checkCollision(map, targetX, targetY, currentX, currentY) {
   const TILE_SIZE = 50;
-  const HITBOX = { x: 16, y: 40, w: 32, h: 20 };
+  // UPDATED: Width 40, Offset 12 (Matches Server)
+  const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
 
   const points = {
     tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
