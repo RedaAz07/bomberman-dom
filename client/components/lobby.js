@@ -15,7 +15,10 @@ export function Lobby() {
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
   // console.log(ws, "websoket+++++++++++++++++++++");
-
+  useEffect(() => {
+    const interval = setInterval(() => { }, 16);
+    return () => clearInterval(interval);
+  }, []);
   if (!ws.username) navigate("/");
 
   useEffect(() => {
@@ -36,8 +39,7 @@ export function Lobby() {
       }
 
       if (data.type === "counter") {
-        console.log(data,"counter data");
-        
+        console.log(data, "counter data");
         setSec(data.timeLeft);
       }
 

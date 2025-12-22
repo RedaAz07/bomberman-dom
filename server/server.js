@@ -74,6 +74,7 @@ function broadcastRoom(room, obj) {
 
 // --- TIMER ---
 function startGameTimer(room) {
+  if (room.players.length === 1) return;
   if (room.players.length === 2) room.timeLeft = 30;
   if (room.players.length === 4) room.timeLeft = 10;
 
@@ -82,6 +83,7 @@ function startGameTimer(room) {
   room.timer = setInterval(() => {
     room.timeLeft--;
     if (room.timeLeft <= 10) {
+      room.disponible = false;
       broadcastRoom(room, {
         type: "counter",
         timeLeft: room.timeLeft,
@@ -92,8 +94,6 @@ function startGameTimer(room) {
         timeLeft: room.timeLeft - 10,
       });
     }
-
-    // broadcastRoom(room, { type: "counter", timeLeft: room.timeLeft });
 
     if (room.timeLeft <= 0) {
       clearInterval(room.timer);
@@ -647,24 +647,26 @@ wss.on("connection", (socket) => {
   socket.on("close", () => {
     const room = rooms.find((r) => r.id === socket.roomId);
     if (room) {
-      if (room.players.length <= 1) {
-        console.log("helo");
-        stopTimer(room)
-      };
       const player = room.players.find((p) => p.socket === socket);
-      player.stats.isDead = true;
-      broadcastRoom(room, { type: "player-dead", username: player.username });
-      checkWinCondition(room);
       room.players = room.players.filter((p) => p.socket !== socket);
       broadcastRoom(room, {
         type: "player-list",
         players: room.players.map((p) => p.username),
         roomId: room.id,
       });
+      if (room.players.length <= 1) {
+        room.disponible = true;
+        stopTimer(room);
+      }
+      if (player) {
+        player.stats.isDead = true;
+        broadcastRoom(room, { type: "player-dead", username: player.username });
+        checkWinCondition(room);
+      }
     }
   });
 });
 
 server.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`)
+  console.log(`Server running at http://10.1.1.6:${PORT}`)
 );
