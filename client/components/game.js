@@ -261,8 +261,6 @@ export function game() {
         if (data.username === ws.username) setDead(true);
       }
       if (data.type === "game-over") {
-        console.log(data, "dataaaaaaaaaa");
-
         setWinner(data.winner);
         if (data.winner === ws.username) {
           setGameResult({

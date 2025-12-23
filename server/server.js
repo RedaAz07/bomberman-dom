@@ -29,7 +29,6 @@ function createRoom() {
 
   const room = {
     id: rooms.length + 1,
-    count: 0,
     players: [],
     map,
     collisionMap,
@@ -365,7 +364,9 @@ function updateGame(room) {
           if (p.stats.lives <= 0) {
             p.stats.isDead = true;
             broadcastRoom(room, { type: "player-dead", username: p.username });
-            checkWinCondition(room);
+            setTimeout(() => {
+              checkWinCondition(room);
+            }, 0);
           }
         }
       }
@@ -515,6 +516,22 @@ function handleExplosion(room, bomb) {
     }
   });
 }
+function cleanRoom(room) {
+  clearInterval(room.gameInterval);
+  stopTimer(room);
+  room.gameState.active = false;
+  room.players = [];
+  room.map = generateMap(15, 15).map;
+  room.collisionMap = generateMap(15, 15).collisionMap;
+  room.disponible = true;
+  room.gameState = {
+    bombs: [],
+    explosions: [],
+    giftsToExplosion: [],
+    active: false,
+  }
+  room.gameInterval = null;
+}
 
 function checkWinCondition(room) {
   const alive = room.players.filter((p) => !p.stats.isDead);
@@ -524,17 +541,14 @@ function checkWinCondition(room) {
       type: "game-over",
       winner: winner
     });
-    clearInterval(room.gameInterval);
-    room.gameState.active = false;
+    cleanRoom(room);
   } else if (alive.length === 0) {
     broadcastRoom(room, {
       type: "game-over",
       winner: "draw"
     });
-    clearInterval(room.gameInterval);
-    room.gameState.active = false;
+    cleanRoom(room);
   }
-
 }
 
 const base = path.join(process.cwd(), "..", "client");
@@ -651,7 +665,9 @@ wss.on("connection", (socket) => {
       if (player) {
         player.stats.isDead = true;
         broadcastRoom(room, { type: "player-dead", username: player.username });
-        checkWinCondition(room);
+        setTimeout(() => {
+          checkWinCondition(room);
+        }, 0);
       }
       room.players = room.players.filter((p) => p.socket !== socket);
       broadcastRoom(room, {
@@ -659,11 +675,8 @@ wss.on("connection", (socket) => {
         players: room.players.map((p) => p.username),
         roomId: room.id,
       });
-      if (room.players.length <= 1 && room.disponible) {
+      if (room.players.length <= 1) {
         stopTimer(room);
-      }
-      if (room.players.length <= 1 && !room.disponible) {
-        rooms.splice(rooms.indexOf(room), 1);
       }
     }
   });
