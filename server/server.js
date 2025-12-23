@@ -75,7 +75,7 @@ function broadcastRoom(room, obj) {
 // --- TIMER ---
 function startGameTimer(room) {
   if (room.players.length === 1) return;
-  if (room.players.length === 2) room.timeLeft = 30;
+  if (room.players.length === 2) room.timeLeft = 15;
   if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
@@ -659,9 +659,11 @@ wss.on("connection", (socket) => {
         players: room.players.map((p) => p.username),
         roomId: room.id,
       });
-      if (room.players.length <= 1) {        
-        room.disponible = true;
+      if (room.players.length <= 1 && room.disponible) {
         stopTimer(room);
+      }
+      if (room.players.length <= 1 && !room.disponible) {
+        rooms.splice(rooms.indexOf(room), 1);
       }
     }
   });
