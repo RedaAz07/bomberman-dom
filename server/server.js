@@ -1,5 +1,3 @@
-// [server.js]
-
 import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -12,7 +10,7 @@ const TILE_SIZE = 50;
 // --- CONFIGURATION ---
 const GAME_TICK = 20; // Physics runs at 50 FPS (20ms) - High Precision
 const BROADCAST_INTERVAL = 2; // Network runs at 25 FPS (40ms) - Throttled to save bandwidth
-const MOVEMENT_SPEED = 6;
+const MOVEMENT_SPEED = 2.4;
 
 const TILES = {
   GRASS: 0,
@@ -185,10 +183,8 @@ function updateGame(room) {
   // 1. PROCESS MOVEMENT (Runs every 20ms for High Precision)
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
-
-    const speedPer50ms = MOVEMENT_SPEED + p.stats.speedLevel * 1.5;
-    const pixelsPerMs = speedPer50ms / 50;
-    const moveDist = pixelsPerMs * GAME_TICK;
+    
+    const moveDist = MOVEMENT_SPEED + p.stats.speedLevel * 0.6;
 
     // Dynamic Steps to prevent wall tunneling at high speeds
     const STEPS = Math.ceil(moveDist / 4);
