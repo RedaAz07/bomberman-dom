@@ -5,13 +5,13 @@ import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
 
 const tileClass = {
-  0: "tile tile-grass", // ard
-  1: "tile tile-wall-vertical", //  hiit
-  2: "tile tile-braml", // li kaytfjr
+  0: "tile tile-grass",
+  1: "tile tile-wall-vertical",
+  2: "tile tile-braml",
   3: "tile tile-wall-corner",
-  4: "tile tile-stone", //walo
-  5: "tile tile-bomb", // bomb
-  6: "tile tile-explosion", // explosion
+  4: "tile tile-stone",
+  5: "tile tile-bomb",
+  6: "tile tile-explosion",
   7: "tile tile-speed",
   8: "tile tile-bomb-up",
   9: "tile tile-power",
@@ -29,170 +29,177 @@ const tileTypes = {
   9: "power",
 };
 
+// --- PHYSICS HELPER (Matches Server Logic) ---
+// [game.js]
+
+function checkCollision(map, targetX, targetY, currentX, currentY) {
+  const TILE_SIZE = 50;
+  // UPDATED: Width 40, Offset 12 (Matches Server)
+  const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
+
+  const points = {
+    tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
+    tr: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y },
+    bl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y + HITBOX.h },
+    br: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y + HITBOX.h },
+  };
+
+  const collisions = {};
+  let hasCollision = false;
+
+  for (const key in points) {
+    const point = points[key];
+    const tileX = Math.floor(point.x / TILE_SIZE);
+    const tileY = Math.floor(point.y / TILE_SIZE);
+
+    let isBlocked = false;
+
+    if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
+      isBlocked = true;
+    } else {
+      const row = map[tileY];
+      const cell = row ? row[tileX] : 1;
+      if ([1, 2, 3, 4].includes(cell)) {
+        isBlocked = true;
+      } else if (cell === 5) {
+        if (currentX !== null && currentY !== null) {
+          const playerRect = {
+            left: currentX + HITBOX.x,
+            right: currentX + HITBOX.x + HITBOX.w,
+            top: currentY + HITBOX.y,
+            bottom: currentY + HITBOX.y + HITBOX.h,
+          };
+          const bombRect = {
+            left: tileX * TILE_SIZE,
+            right: (tileX + 1) * TILE_SIZE,
+            top: tileY * TILE_SIZE,
+            bottom: (tileY + 1) * TILE_SIZE,
+          };
+          const isOverlapping =
+            playerRect.left < bombRect.right &&
+            playerRect.right > bombRect.left &&
+            playerRect.top < bombRect.bottom &&
+            playerRect.bottom > bombRect.top;
+          if (!isOverlapping) isBlocked = true;
+        } else {
+          isBlocked = true;
+        }
+      }
+    }
+    collisions[key] = isBlocked;
+    if (isBlocked) hasCollision = true;
+  }
+  return { hasCollision, collisions };
+}
+
+function lerp(start, end, t) {
+  return start * (1 - t) + end * t;
+}
+
 export function game() {
-  /*  const playerSpeed = useRef(0.1);
-   const bombPower = useRef(2); */
-  const gifts = useRef([]);
-  const giftstoExplosion = useRef([]);
-  const space = useRef(null);
-  const divv = useRef(null);
-  //! state for the map and players
-  // const nbBombs = useRef(2);
-  const bombElementsRef = useRef(new Map());
-  const explosionElementsRef = useRef(new Map());
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
-  const [speed, setspeed] = useState(1);
+  const [speedLevel, setSpeedLevel] = useState(1);
   const [bombs, setBombs] = useState(1);
   const [bombRange, setBombRange] = useState(1);
-  const speedRef = useRef(0.1);
-  const bombRangeRef = useRef(1);
-  const maxBombsRef = useRef(1);
-  const activeBombsRef = useRef(0);
   const [Timer, setTimer] = useState("00:00");
-  const [dead, setDead] = useState(false)
-  const explosionHitRef = useRef(false);
-  let frameIndex = 0;
-  const frameWidth = 64;
-  const frameHeight = 64;
+  const [dead, setDead] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
+
+  const bombElementsRef = useRef(new Map());
+  const bombTimersRef = useRef(new Map());
+  const explosionElementsRef = useRef(new Map());
+  const mapRef = useRef(null);
+
+  const map = store.get().map;
+  const playersList = store.get().players;
+  const [grid, setGrid] = useState(map);
+  const latestGridRef = useRef(map);
+
+  const playerStateRef = useRef(
+    playersList.map((p, i) => {
+      // FIX: Exact spawn coordinates matching server (TileCenter - Offset)
+      const T1 = 75;
+      const T13 = 13 * 50 + 25; // 675
+      const offX = 32;
+      const offY = 50;
+
+      const spawns = [
+        { x: T1 - offX, y: T1 - offY }, // TL (43, 25)
+        { x: T13 - offX, y: T1 - offY }, // TR (643, 25)
+        { x: T13 - offX, y: T13 - offY }, // BR (643, 625)
+        { x: T1 - offX, y: T13 - offY }, // BL (43, 625)
+      ];
+      const start = spawns[i] || { x: 0, y: 0 };
+      return {
+        x: start.x,
+        y: start.y,
+        targetX: start.x,
+        targetY: start.y,
+        direction: "down",
+        isMoving: false,
+        frame: 0,
+        animTime: 0,
+      };
+    })
+  );
+
+  const inputsRef = useRef({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+  });
+  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const [scale, setScale] = useState(1);
+  const [winner, setWinner] = useState(null);
+
   const FRAMES = {
     ArrowRight: { row: 11, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowLeft: { row: 9, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowUp: { row: 8, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
-  const explosionsRef = useRef([]);
-  const bombsRef = useRef([]);
-  const map = store.get().map;
-  const players = store.get().players;
-  const [grid, setGrid] = useState(map);
-  const mapRef = useRef(null);
-  const [playerPosition, setPlayerPosition] = useState({
-    0: { top: "0px", left: "0px" },
-    1: { top: "0px", left: "0px" },
-    2: { top: "0px", left: "0px" },
-    3: { top: "0px", left: "0px" },
-  });
-  //! STATE AND REFS
-  const eventKey = useRef(null);
-  const playersRef = [useRef(null), useRef(null), useRef(null), useRef(null)];
-  const mapData = store.get().collisionMap;
-  //! ANIMATION VARIABLES
-  const [scale, setScale] = useState(1);
-  //! winner or loser
-  const playerList = [...store.get().players];
-  const [gameResult, setGameResult] = useState(null);
-  console.log("playerList", playerList);
-
-  useEffect(() => {
-    console.log("useeffect");
-
-    if (playerList.length === 1) {
-      setGameResult({
-        type: "win",
-        username: playerList[0].username
-      });
-      ws.send(JSON.stringify({
-        type: "you-lose",
-        roomId: ws.roomId,
-        username: playerList[0].username,
-      }))
-    }
-  }, [playerList]);
-
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
-    ws.send(
-      JSON.stringify({
-        type: "message",
-        msg,
-      })
-    );
-
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: "message", msg }));
     setMsg("");
     e.target.value = "";
-    if (e.key != "Enter") {
-      e.target.previousSibling.value = "";
-    }
+    if (e.key != "Enter") e.target.previousSibling.value = "";
   };
-  //! BOMB PLACEMENT
-  function placeBomb(posx, posy) {
-    const id = store.get().players.findIndex((p) => p.username === ws.username);
-    let playerEl = playersRef[id].current;
-    if (!playerEl) return;
-    const x = Math.round(posx / 50);
-    const y = Math.round(posy / 50);
-    const bombId = `bomb-${Date.now()}`;
-    for (const bomb of bombsRef.current) {
-      if (bomb.x === x && bomb.y === y) {
-        return;
-      }
-    }
-    setGrid((prevGrid) => {
-      const newGrid = prevGrid.map((row) => row.slice());
-      const colIndex = x;
-      const rowIndex = y;
-      if (newGrid[rowIndex] && newGrid[rowIndex][colIndex] === 0) {
-        newGrid[rowIndex][colIndex] = 5; // 5 represents a bomb
 
-        activeBombsRef.current += 1;
-
-        ws.send(
-          JSON.stringify({
-            type: "place-bomb",
-            roomId: ws.roomId,
-            username: ws.username,
-            x: colIndex,
-            y: rowIndex,
-          })
-        );
-      }
-      return newGrid;
-    });
-
-
-
-    const newBomb = { id: bombId, x, y, creationTime: performance.now() };
-    bombsRef.current = [...bombsRef.current, newBomb];
-
-    // Remove bomb after 3 seconds
+  function placeBomb() {
+    if (ws.readyState === 1)
+      ws.send(JSON.stringify({ type: "place-bomb", roomId: ws.roomId }));
   }
-  //! EVENT HANDLERS
+
   function handleKeyDown(e) {
-    if (FRAMES[e.key]) {
-      eventKey.current = e.key;
+    if (FRAMES[e.key] && !e.repeat) {
+      inputsRef.current[e.key] = true;
+      if (ws.readyState === 1)
+        ws.send(JSON.stringify({ type: "input", key: e.key, state: true }));
     }
-    if (e.key === " " && !e.repeat && activeBombsRef.current < maxBombsRef.current) {
-      space.current = e.key;
-    }
+    if (e.key === " " && !e.repeat) placeBomb();
   }
 
   function handleKeyUp(e) {
-    if (eventKey.current === e.key) {
-      eventKey.current = null;
-      frameIndex = 0;
+    if (FRAMES[e.key]) {
+      inputsRef.current[e.key] = false;
+      if (ws.readyState === 1)
+        ws.send(JSON.stringify({ type: "input", key: e.key, state: false }));
     }
   }
 
-
   useEffect(() => {
-    //!timer of game
-    let obj = {
-      min: 0,
-      sec: 0,
-      text: "00:00",
-    };
-
-    setInterval(() => {
+    let obj = { min: 0, sec: 0 };
+    const timerInterval = setInterval(() => {
       obj.sec++;
-
       if (obj.sec === 60) {
         obj.min++;
         obj.sec = 0;
       }
-
       setTimer(
         String(obj.min).padStart(2, "0") +
         ":" +
@@ -200,614 +207,275 @@ export function game() {
       );
     }, 1000);
 
-
-    //!websocket onmessage
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "message") {
+
+      if (data.type === "message")
         setChat((prev) => [
           ...prev,
           { username: data.username, msg: data.msg },
         ]);
+      if (data.type === "grid-update") {
+        setGrid(data.map);
+        latestGridRef.current = data.map;
       }
-      if (data.type === "player-move") {
-        const { username, x, y, frameX, frameY } = data;
-
-        if (username === ws.username) return;
-
-        const players = store.get().players;
-        const index = players.findIndex((p) => p.username === username);
-        if (index === -1) return;
-
-        let el = playersRef[index]?.current;
-        if (!el) return;
-
-        el.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-        el.style.transform = `translate3d(${x}px, ${y - 25}px, 0)`;
+      if (data.type === "stats-update") {
+        setLives(data.stats.lives);
+        setBombs(data.stats.maxBombs);
+        setBombRange(data.stats.range);
+        setSpeedLevel(data.stats.speedLevel);
       }
-      if (data.type === "player-bomb") {
-        if (data.username === ws.username) return;
-        console.log(data, "data client");
 
-        const { x, y } = data;
+      if (data.type === "players-sync") {
+        data.moves.forEach((move) => {
+          const index = playersList.findIndex((p) => p.username === move.username);
+          if (index === -1) return;
 
-        setGrid((prev) => {
-          const newGrid = prev.map((r) => r.slice());
-          if (newGrid[y] && newGrid[y][x] === 0) {
-            newGrid[y][x] = 5;
+          const pState = playerStateRef.current[index];
+          const isMe = move.username === ws.username;
+
+          if (isMe) {
+            // RECONCILIATION: RELAXED THRESHOLD TO 5px
+            const dist = Math.hypot(pState.x - move.x, pState.y - move.y);
+            if (dist > 15) {
+              pState.x = move.x;
+              pState.y = move.y;
+            } else if (dist > 5) {
+              pState.x = lerp(pState.x, move.x, 0.2);
+              pState.y = lerp(pState.y, move.y, 0.2);
+            }
+          } else {
+            pState.targetX = move.x;
+            pState.targetY = move.y;
+            pState.direction = move.direction;
+            // FIX: Sync isMoving state directly from server to stop ghost animations
+            pState.isMoving = move.isMoving;
           }
-          return newGrid;
         });
-
-        bombsRef.current.push({
-          id: `bomb-${Date.now()}`,
-          x,
-          y,
-          creationTime: performance.now(),
-        });
-
-        mapData[y][x] = 1;
       }
+
       if (data.type == "player-dead") {
-        const index = players.findIndex(p => p.username === data.username);
+        const index = playersList.findIndex((p) => p.username === data.username);
+        if (index !== -1 && playersRef[index]?.current)
+          playersRef[index].current.style.display = "none";
+        if (data.username === ws.username) setDead(true);
+      }
+      if (data.type === "game-over") {
+        setWinner(data.winner);
+        if (data.winner === ws.username) {
+          setGameResult({
+            type: "win",
+            username: data.winner
+          });
+        } else if (data.winner == "draw") {
+          setGameResult({
+            type: "draw",
+            username: ws.username
+          });
+        } else {
+          setGameResult({
+            type: "lose",
+            username: ws.username
+          });
+        }
+      }
+      if (data.type == "player-hit") {
+        const index = playersList.findIndex((p) => p.username === data.username);
         if (index === -1) return;
 
-        let el = playersRef[index]?.current;
-        if (!el) return;
-        el.style.display = "none";
-      }
-      if (data.type === "gift-spawn") {
-        setGrid(prev => {
-          const g = prev.map(r => r.slice());
-          g[data.y][data.x] = data.giftType;
-          return g;
-        });
-      }
-      if (data.type === "gift-collected") {
-        const { x, y } = data;
-        setGrid((prev) => {
-          const newGrid = prev.map((row) => row.slice());
-          newGrid[y][x] = 0;
-          return newGrid;
-        });
-      }
-      if (data.type == "you-lose") {
-        console.log("lose");
+        const playerEl = playersRef[index]?.current;
+        if (!playerEl) return;
+        playerEl.classList.add("hit");
 
-        if (data.username == ws.username) {
-          return;
-        }
-        setGameResult({
-          type: "lose",
-          username: data.username
-        });
+        setTimeout(() => {
+          playerEl.classList.remove("hit");
+        }, 2000);
       }
     };
 
-
-    //! resize window to set scale
     const width = 1500;
     const height = 1500;
-
     function handleResize() {
       if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
         setScale(1);
         return;
       }
-      const widthScale = window.innerWidth / width;
-      const heightScale = window.innerHeight / height;
-      const newScale = Math.min(widthScale, heightScale);
-      setScale(newScale);
+      setScale(
+        Math.min(window.innerWidth / width, window.innerHeight / height)
+      );
     }
     handleResize();
     window.addEventListener("resize", handleResize);
 
-
-    //! setup the players
-    if (!mapRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const width = entry.contentRect.width;
-      const height = entry.contentRect.height;
-      if (width > 0 && height > 0) {
-        setPlayerPosition({
-          0: { top: "64px", left: "64px" },
-          1: { top: "64px", left: `${width - 128}px` },
-          2: { top: `${height - 128}px`, left: `${width - 128}px` },
-          3: { top: `${height - 128}px`, left: "64px" },
-        });
-      }
-    });
-    observer.observe(mapRef.current);
-    //! WEBSOCKET SETUP
-    const id = store.get().players.findIndex((p) => p.username === ws.username);
-    let playerEl = playersRef[id].current;
-    if (!playerEl) {
-      return
-    }
-    //! ANIMATION LOOP
     let lastTime = 0;
-    let animationTimer = 0;
-    let animationSpeed = 80;
-    let posX = 0;
-    let posY = 0;
-
-    //! COLLISION DETECTION
-    function checkCollision(newX, newY) {
-      const baseX = playerEl.offsetLeft;
-      const baseY = playerEl.offsetTop;
-      const absX = baseX + newX;
-      const absY = baseY + newY;
-
-      // Full square fit (62x62) to eliminate both horizontal and vertical sliding
-      const hitBox = {
-        x: 1,
-        y: 1,
-        w: 40,
-        h: 40,
-      };
-      const points = {
-        tl: { x: absX + hitBox.x, y: absY + hitBox.y },
-        tr: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y },
-        bl: { x: absX + hitBox.x, y: absY + hitBox.y + hitBox.h },
-        br: { x: absX + hitBox.x + hitBox.w, y: absY + hitBox.y + hitBox.h },
-      };
-
-      const collisions = {};
-      let hasCollision = false;
-
-      for (const key in points) {
-        const point = points[key];
-        const tileX = Math.floor(point.x / 50);
-        const tileY = Math.floor(point.y / 50);
-
-        let isBlocked = false;
-
-        setGrid((prevGrid) => {
-          if (prevGrid[tileY][tileX] === 7 && prevGrid[tileY][tileX] !== undefined) {
-            if (speedRef.current < 0.20) {
-
-              speedRef.current += 0.05;
-              setspeed((prev) => prev + 1);
-            }
-
-            const newGrid = prevGrid.map((row) => row.slice());
-            newGrid[tileY][tileX] = 0;
-            ws.send(JSON.stringify({
-              type: "gift-collected",
-              x: tileX,
-              y: tileY,
-            }));
-            return newGrid;
-
-          } else if (prevGrid[tileY][tileX] === 9 && prevGrid[tileY][tileX] !== undefined) {
-
-            if (maxBombsRef.current < 3) {
-              maxBombsRef.current += 1;
-
-              setBombs((prev) => prev + 1);
-            }
-
-            const newGrid = prevGrid.map((row) => row.slice());
-            newGrid[tileY][tileX] = 0;
-            ws.send(JSON.stringify({
-              type: "gift-collected",
-              x: tileX,
-              y: tileY,
-
-            }));
-            return newGrid;
-
-          } else if (prevGrid[tileY][tileX] === 8 && prevGrid[tileY][tileX] !== undefined) {
-            if (bombRangeRef.current < 3) {
-              bombRangeRef.current += 1;
-              setBombRange((prev) => prev + 1);
-            }
-
-            const newGrid = prevGrid.map((row) => row.slice());
-            newGrid[tileY][tileX] = 0;
-            ws.send(JSON.stringify({
-              type: "gift-collected",
-              x: tileX,
-              y: tileY,
-            }));
-            return newGrid;
-
-          }
-
-          return prevGrid;
-        })
-
-
-        if (
-          !mapData ||
-          !mapData[tileY] ||
-          mapData[tileY][tileX] === undefined
-        ) {
-          isBlocked = true;
-        } else if (mapData[tileY][tileX] !== 0) {
-          isBlocked = true;
-        }
-
-        collisions[key] = isBlocked;
-        if (isBlocked) hasCollision = true;
-      }
-      let escapeTheBomb = true;
-      for (let index = 0; index < bombsRef.current.length; index++) {
-        const bomb = bombsRef.current[index];
-        for (const key in points) {
-          const point = points[key];
-          const tileX = Math.floor(point.x / 50);
-          const tileY = Math.floor(point.y / 50);
-
-          if (bomb.x === tileX && bomb.y === tileY) {
-            escapeTheBomb = false;
-            break;
-          }
-        }
-        if (escapeTheBomb) {
-          mapData[bomb.y][bomb.x] = 1;
-        }
-      }
-      return { hasCollision, collisions };
-    }
-
-    //! function dyal hit by bombs
-    function checkExplosionHit(playerEl, posX, posY) {
-      if (!playerEl) return false;
-      const baseX = playerEl.offsetLeft;
-      const baseY = playerEl.offsetTop;
-
-      // center of player
-      const absX = baseX + posX + 25;
-      const absY = baseY + posY + 25;
-
-      const tileX = Math.floor(absX / 50);
-      const tileY = Math.floor(absY / 50);
-
-      for (let i = 0; i < explosionsRef.current.length; i++) {
-        const exp = explosionsRef.current[i];
-        if (exp.x === tileX && exp.y === tileY) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    //! loop dyalna
     function loop(timeStamp) {
-
-      const delta = timeStamp - lastTime;
+      if (dead) return;
+      const deltaTime = timeStamp - lastTime;
       lastTime = timeStamp;
-      //! BOMB ANIMATION AND EXPLOSION HANDLING
 
-      const bombsToDelete = bombsRef.current.filter(
-        (b) => timeStamp - b.creationTime > 3000
-      );
+      playersRef.forEach((ref, i) => {
+        if (!ref.current) return;
+        const pState = playerStateRef.current[i];
+        const playerInfo = store.get().players[i];
+        if (!playerInfo) return;
 
-      if (bombsToDelete.length > 0) {
-        bombsRef.current = bombsRef.current.filter(
-          (b) => timeStamp - b.creationTime <= 3000
-        );
-        setGrid((prevGrid) => {
-          const newGrid = prevGrid.map((row) => row.slice());
-          let hasChanges = false;
+        const isMe = playerInfo.username === ws.username;
 
-          bombsToDelete.forEach((bomb) => {
-            activeBombsRef.current -= 1;
-            const range = bombRangeRef.current || 1;
+        if (isMe) {
+          const speedVal = 6 + speedLevel * 1.5;
+          const pixelPerMs = speedVal / 50;
+          const moveDist = pixelPerMs * deltaTime;
 
-            const createExplosion = (tx, ty) => {
-              if (!newGrid[ty] || newGrid[ty][tx] === undefined) return false; // Stop
+          let moving = false;
+          const currentMap = latestGridRef.current;
 
-              const cell = newGrid[ty][tx];
+          const STEPS = Math.ceil(moveDist / 4);
+          const stepDist = moveDist / STEPS;
 
-              if (cell === 1 || cell === 3 || cell === 4) return false;
-              if (cell === 5) {
-                bombsRef.current.forEach((bomb) => {
-                  if (bomb.x === tx && bomb.y === ty) {
-                    bomb.creationTime = 0;
-                  }
-                });
+          for (let s = 0; s < STEPS; s++) {
+            if (inputsRef.current.ArrowUp) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x,
+                pState.y - stepDist,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.y -= stepDist;
+              } else {
+                if (collisions.tl && !collisions.tr) pState.x += stepDist;
+                else if (collisions.tr && !collisions.tl) pState.x -= stepDist;
               }
-
-              if (cell === 2) {
-
-                gifts.current.push({ x: tx, y: ty });
-                newGrid[ty][tx] = 6;
-                mapData[ty][tx] = 0;
-                hasChanges = true;
-                explosionsRef.current.push({
-                  x: tx,
-                  y: ty,
-                  creationTime: timeStamp,
-                });
-                return false;
+              pState.direction = "up";
+              moving = true;
+            } else if (inputsRef.current.ArrowDown) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x,
+                pState.y + stepDist,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.y += stepDist;
+              } else {
+                if (collisions.bl && !collisions.br) pState.x += stepDist;
+                else if (collisions.br && !collisions.bl) pState.x -= stepDist;
               }
-              if (cell == 7 || cell == 8 || cell == 9) {
-                giftstoExplosion.current.push({
-                  x: tx,
-                  y: ty,
-                  cell: cell,
-                });
+              pState.direction = "down";
+              moving = true;
+            } else if (inputsRef.current.ArrowLeft) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x - stepDist,
+                pState.y,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.x -= stepDist;
+              } else {
+                if (collisions.tl && !collisions.bl) pState.y += stepDist;
+                else if (collisions.bl && !collisions.tl) pState.y -= stepDist;
               }
-              newGrid[ty][tx] = 6;
-              mapData[ty][tx] = 0;
-
-              hasChanges = true;
-              explosionsRef.current.push({
-                x: tx,
-                y: ty,
-                creationTime: timeStamp,
-              });
-              return true;
-            };
-
-            createExplosion(bomb.x, bomb.y);
-
-            const directions = [
-              { dx: 0, dy: -1 }, // Up
-              { dx: 0, dy: 1 }, // Down
-              { dx: -1, dy: 0 }, // Left
-              { dx: 1, dy: 0 }, // Right
-            ];
-
-            directions.forEach((dir) => {
-              for (let i = 1; i <= range; i++) {
-                const currentX = bomb.x + dir.dx * i;
-                const currentY = bomb.y + dir.dy * i;
-
-                const shouldContinue = createExplosion(currentX, currentY);
-                if (!shouldContinue) break;
+              pState.direction = "left";
+              moving = true;
+            } else if (inputsRef.current.ArrowRight) {
+              const { hasCollision, collisions } = checkCollision(
+                currentMap,
+                pState.x + stepDist,
+                pState.y,
+                pState.x,
+                pState.y
+              );
+              if (!hasCollision) {
+                pState.x += stepDist;
+              } else {
+                if (collisions.tr && !collisions.br) pState.y += stepDist;
+                else if (collisions.br && !collisions.tr) pState.y -= stepDist;
               }
-            });
-          });
-
-          return hasChanges ? newGrid : prevGrid;
-        });
-      }
-      //! EXPLOSION ANIMATION HANDLING
-      explosionsRef.current.forEach((exp) => {
-        const key = `${exp.y}-${exp.x}`;
-        const explosion = explosionElementsRef.current.get(key);
-
-        if (explosion) {
-          const age = timeStamp - exp.creationTime;
-
-          const currentFrame = Math.floor(age / 100) % 5;
-          const frameX = currentFrame * 50;
-
-          explosion.style.backgroundPosition = `-${frameX}px -150px`;
-        }
-      });
-      //! Remove explosions after 500ms
-      const explosionsToDelete = explosionsRef.current.filter(
-        (e) => timeStamp - e.creationTime > 500
-      );
-
-      if (explosionsToDelete.length > 0) {
-        explosionsRef.current = explosionsRef.current.filter(
-          (e) => timeStamp - e.creationTime <= 500
-        );
-        setGrid((prevGrid) => {
-          const newGrid = prevGrid.map((row) => row.slice());
-          let hasChanges = false;
-
-          explosionsToDelete.forEach((exp) => {
-            if (newGrid[exp.y] && newGrid[exp.y][exp.x] === 6) {
-              newGrid[exp.y][exp.x] = 0;
-              mapData[exp.y][exp.x] = 0;
-              giftstoExplosion.current.forEach((g) => {
-                if (g.x === exp.x && g.y === exp.y) {
-                  newGrid[g.y][g.x] = g.cell;
-                }
-              });
-
-              gifts.current.forEach((gift) => {
-                if (gift.x === exp.x && gift.y === exp.y) {
-                  let giftType = Math.floor(Math.random() * 5) + 7;
-                  if (giftType > 9) {
-                    giftType = 0;
-                  }
-
-                  newGrid[gift.y][gift.x] = giftType;
-                  mapData[gift.y][gift.x] = 0;
-                  ws.send(JSON.stringify({
-                    type: "gift",
-                    roomId: ws.roomId,
-                    x: gift.x,
-                    y: gift.y,
-                    giftType: giftType
-                  }));
-                }
-              });
-
-              hasChanges = true;
+              pState.direction = "right";
+              moving = true;
             }
-          });
+          }
+          pState.isMoving = moving;
+        } else {
+          pState.x = lerp(pState.x, pState.targetX, 0.2);
+          pState.y = lerp(pState.y, pState.targetY, 0.2);
+        }
 
-          gifts.current = [];
-          giftstoExplosion.current = [];
+        ref.current.style.transform = `translate3d(${pState.x}px, ${pState.y}px, 0)`;
 
+        if (pState.isMoving) {
+          let key = "ArrowDown";
+          if (pState.direction === "up") key = "ArrowUp";
+          if (pState.direction === "left") key = "ArrowLeft";
+          if (pState.direction === "right") key = "ArrowRight";
 
-          return hasChanges ? newGrid : prevGrid;
-        });
-      }
+          const def = FRAMES[key];
+          const frameX = def.col[pState.frame] * 64;
+          const frameY = def.row * 64;
+          ref.current.style.backgroundPosition = `-${frameX}px -${frameY}px`;
 
-      //! Update bomb animations
-      bombsRef.current.forEach((bomb) => {
-        const key = `${bomb.y}-${bomb.x}`;
-        const bombEl = bombElementsRef.current.get(key);
-
-        if (bombEl) {
-          const age = timeStamp - bomb.creationTime;
-          const currentFrame = Math.floor(age / 800) % 4;
-          const frameX = currentFrame * 50;
-
-          bombEl.style.backgroundPosition = `-${frameX}px`;
+          pState.animTime += deltaTime;
+          if (pState.animTime > 80) {
+            pState.frame = (pState.frame + 1) % def.col.length;
+            pState.animTime = 0;
+          }
         }
       });
 
-      if (!dead && playerEl && space.current === " ") {
-
-        const baseX = playerEl.offsetLeft;
-        const baseY = playerEl.offsetTop;
-        const absX = baseX + posX;
-        const absY = baseY + posY;
-        placeBomb(absX, absY);
-        space.current = null;
-      }
-      //! 💥 EXPLOSION COLLISION (ALWAYS CHECK)
-      const hitByExplosion = checkExplosionHit(playerEl, posX, posY);
-
-      if (hitByExplosion && !explosionHitRef.current) {
-        setLives((prev) => {
-          const next = prev - 1
-          if (next == 0) {
-            playerEl.style.display = "none";
-            setDead(true);
-            playerList.splice(playerList.findIndex(p => p.username === ws.username), 1);
-            ws.send(JSON.stringify({
-              type: "player-dead",
-              roomId: ws.roomId,
-              username: ws.username,
-            }));
+      bombElementsRef.current.forEach((el, key) => {
+        if (el) {
+          let startTime = bombTimersRef.current.get(key);
+          if (!startTime) {
+            startTime = timeStamp;
+            bombTimersRef.current.set(key, startTime);
           }
-          return next
-        })
-        explosionHitRef.current = true;
-      }
-
-      if (!hitByExplosion) {
-        explosionHitRef.current = false;
-      }
-
-
-      if (!dead && eventKey.current) {
-        const anim = FRAMES[eventKey.current];
-        const col = anim.col[frameIndex];
-        const row = anim.row;
-        // frame position
-        const frameX = col * frameWidth;
-        const frameY = row * frameHeight;
-
-        playerEl.style.backgroundPosition = `-${frameX}px -${frameY}px`;
-
-        // movement with deltaTime
-        const moveDist = speedRef.current * delta;
-        if (eventKey.current === "ArrowRight") {
-          const { hasCollision, collisions } = checkCollision(
-            posX + moveDist,
-            posY
-          );
-
-          if (!hasCollision) {
-            posX += moveDist;
-          } else {
-            if (collisions.tr && !collisions.br) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision)
-                posY += moveDist;
-            } else if (collisions.br && !collisions.tr) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision)
-                posY -= moveDist;
-            }
-          }
+          const age = timeStamp - startTime;
+          const frame = Math.min(Math.floor(age / 600), 3);
+          el.style.backgroundPosition = `-${frame * 50}px`;
         }
-        if (eventKey.current === "ArrowLeft") {
-          const { hasCollision, collisions } = checkCollision(
-            posX - moveDist,
-            posY
-          );
+      });
 
-          if (!hasCollision) {
-            posX -= moveDist;
-          } else {
-            if (collisions.tl && !collisions.bl) {
-              if (!checkCollision(posX, posY + moveDist).hasCollision)
-                posY += moveDist;
-            } else if (collisions.bl && !collisions.tl) {
-              if (!checkCollision(posX, posY - moveDist).hasCollision)
-                posY -= moveDist;
-            }
-          }
-        }
-        if (eventKey.current === "ArrowUp") {
-          const { hasCollision, collisions } = checkCollision(
-            posX,
-            posY - moveDist
-          );
+      const expFrame = Math.floor(timeStamp / 100) % 5;
+      explosionElementsRef.current.forEach((el) => {
+        if (el) el.style.backgroundPosition = `-${expFrame * 50}px -150px`;
+      });
 
-          if (!hasCollision) {
-            posY -= moveDist;
-          } else {
-            if (collisions.tl && !collisions.tr) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision)
-                posX += moveDist;
-            } else if (collisions.tr && !collisions.tl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision)
-                posX -= moveDist;
-            }
-          }
-        }
-        if (eventKey.current === "ArrowDown") {
-          const { hasCollision, collisions } = checkCollision(
-            posX,
-            posY + moveDist
-          );
-
-          if (!hasCollision) {
-            posY += moveDist;
-          } else {
-            if (collisions.bl && !collisions.br) {
-              if (!checkCollision(posX + moveDist, posY).hasCollision)
-                posX += moveDist;
-            } else if (collisions.br && !collisions.bl) {
-              if (!checkCollision(posX - moveDist, posY).hasCollision)
-                posX -= moveDist;
-            }
-          }
-        }
-        playerEl.style.transform = `translate3d(${posX}px, ${posY - 25}px, 0)`;
-        ws.send(
-          JSON.stringify({
-            type: "move",
-            roomId: ws.roomId,
-            username: ws.username,
-            x: posX,
-            y: posY,
-            frameX: frameX,
-            frameY: frameY,
-          })
-        );
-
-
-        animationTimer += delta;
-        if (animationTimer > animationSpeed) {
-          animationTimer = 0;
-          frameIndex++;
-          if (frameIndex >= anim.col.length) frameIndex = 0;
-        }
-
-      }
       requestAnimationFrame(loop);
     }
-
     loop(0);
   }, []);
 
-  return gameResult ? jsx("div", { className: "winner-announcement" }, gameResult.type === "win" ? jsx("div", null, `🎉 Congratulations ${gameResult.username}, You Win! 🎉`) : jsx("div", null, `💀 Sorry ${gameResult.username}, You Lose! 💀`)) :
-    jsx(
+  return gameResult ?
+    jsx("div", { className: "game-result" },
+      jsx("div", { className: "result-content" },
+        jsx("div", { className: "result-icon" },
+          gameResult.type === "win" ? "🎉"
+            : gameResult.type === "draw" ? "🤝"
+              : "💀"
+        ),
+        jsx("p", { className: "result-message" },
+          gameResult.type === "win"
+            ? `Congratulations ${gameResult.username}, You Win!`
+            : gameResult.type === "draw"
+              ? "It's a Draw! No one wins."
+              : `Sorry, You Lose. Winner is ${winner}`
+        ),
+        jsx("button", {
+          className: "replay-button",
+          onClick: () => window.location.reload()
+        }, "Rejouer")
+      )
+    ) : jsx(
       "div",
       {
         className: "game-container",
         style: {
-          // Apply the scale
           transform: `scale(${scale})`,
-          // Ensure scaling happens from the center
           transformOrigin: "center center",
-          // CRITICAL: Keep pixel art sharp
           imageRendering: "pixelated",
         },
         onKeydown: handleKeyDown,
@@ -818,17 +486,19 @@ export function game() {
       jsx(
         "div",
         { className: "game-hud-container" },
-        // dead && jsx("div", { className: "you-lose" }, `${ws.username} you lose`),
         jsx(
           "div",
           { className: "hud-section player-info" },
           jsx("div", { className: "hud-label" }, "PLAYER"),
-          jsx("div", { className: "hud-value player-name" }, ws.username || "jdab")
+          jsx(
+            "div",
+            { className: "hud-value player-name" },
+            ws.username || "Guest"
+          )
         ),
         jsx(
           "div",
           { className: "hud-bottom" },
-
           jsx(
             "div",
             { className: "hud-stat lives-stat" },
@@ -850,7 +520,6 @@ export function game() {
               )
             )
           ),
-
           jsx(
             "div",
             { className: "hud-stat bombs-stat" },
@@ -862,7 +531,6 @@ export function game() {
               jsx("div", { className: "stat-value bombs-count" }, bombs)
             )
           ),
-
           jsx(
             "div",
             { className: "hud-stat range-stat" },
@@ -874,7 +542,6 @@ export function game() {
               jsx("div", { className: "stat-value" }, bombRange)
             )
           ),
-
           jsx(
             "div",
             { className: "hud-stat players-stat" },
@@ -883,7 +550,7 @@ export function game() {
               "div",
               { className: "stat-info" },
               jsx("div", { className: "stat-label" }, "SPEED"),
-              jsx("div", { className: "stat-value" }, speed)
+              jsx("div", { className: "stat-value" }, speedLevel)
             )
           )
         ),
@@ -904,15 +571,16 @@ export function game() {
         jsx(
           "div",
           { className: "map-container", ref: mapRef },
-          ...players.map((p, i) => {
+          ...playersList.map((p, i) => {
             const Me = p.username == ws.username;
             return jsx(
               "div",
               {
                 className: `player player${i}`,
                 style: {
-                  top: playerPosition[i]?.top,
-                  left: playerPosition[i]?.left,
+                  top: "0px",
+                  left: "0px",
+                  transform: "translate3d(0,0,0)",
                 },
                 key: `${p.username}`,
                 ref: playersRef[i],
@@ -920,7 +588,8 @@ export function game() {
               jsx(
                 "div",
                 { className: "player-label" },
-                !Me && jsx("span", { className: "player-username" }, p.username)
+                !Me &&
+                jsx("span", { className: "player-username" }, p.username)
               )
             );
           }),
@@ -939,23 +608,25 @@ export function game() {
                       key: `${`grass-${rowIndex}-${colIndex}`}`,
                     }),
                     jsx("div", {
-                      className: "tile tile-explosion", // Add CSS for this!
+                      className: "tile tile-explosion",
                       style: getTileStyle(rowIndex, colIndex, cell),
-                      key: `exp-${rowIndex}-${colIndex}`, // Stable Key
+                      key: `exp-${rowIndex}-${colIndex}`,
                       ref: (el) => {
                         const key = `${rowIndex}-${colIndex}`;
-                        if (el) {
-                          // Element created: Add to registry
-                          explosionElementsRef.current.set(key, el);
-                        } else {
-                          // Element removed: Delete from registry
-                          explosionElementsRef.current.delete(key);
-                        }
+                        if (el) explosionElementsRef.current.set(key, el);
+                        else explosionElementsRef.current.delete(key);
                       },
                     }),
                   ]
                   : cell === 5
                     ? [
+                      jsx("div", {
+                        className: "tile tile-grass",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${`grass-${rowIndex}-${colIndex}`}`,
+                      }),
                       jsx("div", {
                         className: "tile tile-bomb",
                         style: getTileStyle(rowIndex, colIndex, cell),
@@ -963,20 +634,12 @@ export function game() {
                         ref: (el) => {
                           const key = `${rowIndex}-${colIndex}`;
                           if (el) {
-                            // Element created: Add to registry
                             bombElementsRef.current.set(key, el);
                           } else {
-                            // Element removed: Delete from registry
                             bombElementsRef.current.delete(key);
+                            bombTimersRef.current.delete(key);
                           }
                         },
-                      }),
-                      jsx("div", {
-                        className: "tile tile-grass",
-                        style: getTileStyle(rowIndex, colIndex, cell),
-                        "data-row": rowIndex,
-                        "data-col": colIndex,
-                        key: `${`grass-${rowIndex}-${colIndex}`}`,
                       }),
                     ]
                     : cell === 2 || cell >= 7
@@ -1001,7 +664,6 @@ export function game() {
                         style: getTileStyle(rowIndex, colIndex, cell),
                         "data-row": rowIndex,
                         "data-col": colIndex,
-                        ref: divv,
                         key: `${`${tileTypes[cell]}-${rowIndex}-${colIndex}`}`,
                       })
               )
@@ -1011,7 +673,6 @@ export function game() {
         jsx(
           "div",
           { className: "chat-section-game" },
-          jsx("h3", null, "Game Chat"),
           jsx(
             "div",
             { className: "chat-messages" },
@@ -1024,7 +685,6 @@ export function game() {
               )
             )
           ),
-
           jsx(
             "div",
             { className: "chat-input-container" },
@@ -1035,15 +695,7 @@ export function game() {
               oninput: (e) => setMsg(e.target.value),
               onkeypress: (e) => e.key === "Enter" && sendMsg(e),
             }),
-            jsx(
-              "button",
-              {
-                onclick: (e) => {
-                  sendMsg(e);
-                },
-              },
-              "Send"
-            )
+            jsx("button", { onclick: (e) => sendMsg(e) }, "Send")
           )
         )
       )
