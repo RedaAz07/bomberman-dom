@@ -517,12 +517,13 @@ function handleExplosion(room, bomb) {
   });
 }
 function cleanRoom(room) {
+  const { map, collisionMap } = generateMap(15, 15);
+  room.map = map;
+  room.collisionMap = collisionMap;
   clearInterval(room.gameInterval);
   stopTimer(room);
   room.gameState.active = false;
   room.players = [];
-  room.map = generateMap(15, 15).map;
-  room.collisionMap = generateMap(15, 15).collisionMap;
   room.disponible = true;
   room.gameState = {
     bombs: [],
@@ -541,14 +542,13 @@ function checkWinCondition(room) {
       type: "game-over",
       winner: winner
     });
-    cleanRoom(room);
   } else if (alive.length === 0) {
     broadcastRoom(room, {
       type: "game-over",
       winner: "draw"
     });
-    cleanRoom(room);
   }
+  cleanRoom(room);
 }
 
 const base = path.join(process.cwd(), "..", "client");
