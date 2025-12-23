@@ -1,1 +1,1 @@
-export const ws = new WebSocket("ws://10.1.1.6:3000");
+export const ws = new WebSocket("ws://localhost:3000");
