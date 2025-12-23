@@ -369,6 +369,7 @@ function updateGame(room) {
           p.socket.send(
             JSON.stringify({ type: "stats-update", stats: p.stats })
           );
+          broadcastRoom(room, { type: "player-hit", username: p.username });
           if (p.stats.lives <= 0) {
             p.stats.isDead = true;
             broadcastRoom(room, { type: "player-dead", username: p.username });
@@ -533,7 +534,7 @@ function cleanRoom(room) {
     explosions: [],
     giftsToExplosion: [],
     active: false,
-  }
+  };
   room.gameInterval = null;
 }
 
