@@ -542,13 +542,14 @@ function checkWinCondition(room) {
       type: "game-over",
       winner: winner
     });
+    cleanRoom(room);
   } else if (alive.length === 0) {
     broadcastRoom(room, {
       type: "game-over",
       winner: "draw"
     });
+    cleanRoom(room);
   }
-  cleanRoom(room);
 }
 
 const base = path.join(process.cwd(), "..", "client");
@@ -662,7 +663,7 @@ wss.on("connection", (socket) => {
     const room = rooms.find((r) => r.id === socket.roomId);
     if (room) {
       const player = room.players.find((p) => p.socket === socket);
-      if (player) {
+      if (player && room.gameState.active) {
         player.stats.isDead = true;
         broadcastRoom(room, { type: "player-dead", username: player.username });
         setTimeout(() => {

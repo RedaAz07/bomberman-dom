@@ -254,7 +254,7 @@ export function game() {
         });
       }
 
-      if (data.type == "player-dead") {
+      if (data.type == "player-dead") {        
         const index = playersList.findIndex((p) => p.username === data.username);
         if (index !== -1 && playersRef[index]?.current)
           playersRef[index].current.style.display = "none";

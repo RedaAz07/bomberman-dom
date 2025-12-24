@@ -39,13 +39,10 @@ export function Lobby() {
       }
 
       if (data.type === "counter") {
-        console.log(data, "counter data");
         setSec(data.timeLeft);
       }
 
       if (data.type === "start-game") {
-        // console.log(data);
-
         store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username, time: data.time });
         navigate("/map");
       }
