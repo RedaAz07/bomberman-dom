@@ -78,7 +78,7 @@ function broadcastRoom(room, obj) {
 function startGameTimer(room) {
   if (room.players.length === 1) return;
   if (room.players.length === 2) room.timeLeft = 30;
-  if (room.players.length === 4) room.timeLeft = 10;
+  if (room.players.length === 4) room.timeLeft = 1;
 
   if (room.timer) clearInterval(room.timer);
 
@@ -112,7 +112,7 @@ function startGame(room) {
   room.tickCount = 0; // Reset tick counter
 
   const spriteOffsetX = 32;
-  const spriteOffsetY = 50;
+  const spriteOffsetY = 40;
 
   room.players.forEach((p, index) => {
     // 1. Calculate Grid Coordinates for spawns

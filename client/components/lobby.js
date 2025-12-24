@@ -15,10 +15,6 @@ export function Lobby() {
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => { }, 16);
-    return () => clearInterval(interval);
-  }, []);
   if (!ws.username) navigate("/");
 
   useEffect(() => {

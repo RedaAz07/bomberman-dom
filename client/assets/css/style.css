@@ -46,7 +46,7 @@ body::-webkit-scrollbar {
   width: 750px;
   height: 750px;
   object-fit: contain;
-  background-color: #2e4e35;
+  background-color: #2e3857;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -87,19 +87,19 @@ body::-webkit-scrollbar {
 
 .tile-speed {
   background-image: url("../images/drop-items.png");
-  background-position: 0 0;
+  background-position: 0 0 !important;
   background-size: 100px;
 }
 
 .tile-bomb-up {
   background-image: url("../images/drop-items.png");
-  background-position: -24px 100%;
+  background-position: -24px 100% !important;
   background-size: 100px;
 }
 
 .tile-power {
   background-image: url("../images/drop-items.png");
-  background-position: 100% 200%;
+  background-position: 100% 200% !important;
   background-size: 100px;
 }
 

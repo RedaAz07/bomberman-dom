@@ -5,10 +5,7 @@ import { navigate } from "../framework/main.js";
 export function Join() {
     const [name, setName] = useState("");
     const [error, setError] = useState("");
-    useEffect(() => {
-        const interval = setInterval(() => { }, 16);
-        return () => clearInterval(interval);
-    }, []);
+
     const handleJoin = (e) => {
         if (!name.trim() || name.trim() >= 10) return;
         ws.username = name.trim()
