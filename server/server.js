@@ -1,3 +1,5 @@
+// [server.js]
+
 import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -6,7 +8,10 @@ import { generateMap } from "./generateMap.js";
 
 const PORT = 3000;
 const TILE_SIZE = 50;
-const GAME_TICK = 20; // 50 ticks per second (Smooth)
+
+// --- CONFIGURATION ---
+const GAME_TICK = 20; // Physics runs at 50 FPS (20ms) - High Precision
+const BROADCAST_INTERVAL = 2; // Network runs at 25 FPS (40ms) - Throttled to save bandwidth
 const MOVEMENT_SPEED = 6;
 
 const TILES = {
@@ -40,6 +45,7 @@ function createRoom() {
       active: false,
     },
     gameInterval: null,
+    tickCount: 0, // NEW: Track ticks for throttling
   };
   rooms.push(room);
   return room;
@@ -50,7 +56,6 @@ function findOrCreateRoom() {
   if (!room) room = createRoom();
   return room;
 }
-
 function stopTimer(room) {
   if (room.timer) clearInterval(room.timer);
   room.timer = null;
@@ -102,11 +107,11 @@ function startGameTimer(room) {
     }
   }, 1000);
 }
-
 // --- SERVER PHYSICS & GAME LOGIC ---
 
 function startGame(room) {
   room.gameState.active = true;
+  room.tickCount = 0; // Reset tick counter
 
   const spriteOffsetX = 32;
   const spriteOffsetY = 50;
@@ -171,11 +176,13 @@ function startGame(room) {
 
 function updateGame(room) {
   const now = Date.now();
+  room.tickCount++; // Increment tick
+
   let gridChanged = false;
   let shouldBroadcast = false;
   const grid = room.map;
 
-  // 1. PROCESS MOVEMENT
+  // 1. PROCESS MOVEMENT (Runs every 20ms for High Precision)
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
 
@@ -183,6 +190,7 @@ function updateGame(room) {
     const pixelsPerMs = speedPer50ms / 50;
     const moveDist = pixelsPerMs * GAME_TICK;
 
+    // Dynamic Steps to prevent wall tunneling at high speeds
     const STEPS = Math.ceil(moveDist / 4);
     const stepSpeed = moveDist / STEPS;
 
@@ -246,33 +254,38 @@ function updateGame(room) {
       }
     }
 
-    // --- CHECK FOR SYNC ---
-    const isMoving =
-      p.inputs.ArrowUp ||
-      p.inputs.ArrowDown ||
-      p.inputs.ArrowLeft ||
-      p.inputs.ArrowRight;
+    // --- CHECK FOR SYNC (THROTTLED) ---
+    // Only check and send network updates every 2nd tick (25 FPS)
+    if (room.tickCount % BROADCAST_INTERVAL === 0) {
+      const isMoving =
+        p.inputs.ArrowUp ||
+        p.inputs.ArrowDown ||
+        p.inputs.ArrowLeft ||
+        p.inputs.ArrowRight;
 
-    if (!p.lastSync)
-      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
+      if (!p.lastSync)
+        p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
 
-    if (
-      Math.abs(p.stats.x - p.lastSync.x) > 0.1 ||
-      Math.abs(p.stats.y - p.lastSync.y) > 0.1 ||
-      isMoving !== p.lastSync.isMoving
-    ) {
-      shouldBroadcast = true;
+      // We check if position changed since LAST BROADCAST
+      if (
+        Math.abs(p.stats.x - p.lastSync.x) > 0.1 ||
+        Math.abs(p.stats.y - p.lastSync.y) > 0.1 ||
+        isMoving !== p.lastSync.isMoving
+      ) {
+        shouldBroadcast = true;
+      }
     }
   });
 
-  if (shouldBroadcast) {
+  // Only broadcast if it's the correct tick AND something changed
+  if (shouldBroadcast && room.tickCount % BROADCAST_INTERVAL === 0) {
     const moves = room.players.map((p) => {
       const isMoving =
         p.inputs.ArrowUp ||
         p.inputs.ArrowDown ||
         p.inputs.ArrowLeft ||
         p.inputs.ArrowRight;
-      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving };
+      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving }; // Update sync state
 
       return {
         username: p.username,
@@ -281,10 +294,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-            ? "down"
-            : p.inputs.ArrowLeft
-              ? "left"
-              : "right",
+          ? "down"
+          : p.inputs.ArrowLeft
+          ? "left"
+          : "right",
         isMoving: isMoving,
       };
     });
@@ -334,7 +347,7 @@ function updateGame(room) {
     room.gameState.explosions.splice(explosionsToDelete[i], 1);
   }
 
-  // 4. INTERACTIONS (UPDATED DAMAGE TIMING)
+  // 4. INTERACTIONS (Delayed Damage)
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
     const centerX = p.stats.x + 32;
@@ -345,13 +358,10 @@ function updateGame(room) {
     const tile = grid[tileY][tileX];
 
     if (tile === TILES.EXPLOSION) {
-      // Find the specific explosion to check its age
       const explosion = room.gameState.explosions.find(
         (e) => e.x === tileX && e.y === tileY
       );
-
-      // FIX: Only apply damage if the explosion has existed for > 150ms
-      // This prevents "instant" death before the animation appears
+      // Wait 150ms before dealing damage so animation syncs
       if (explosion && now - explosion.creationTime > 150) {
         if (now > p.stats.invulnerableUntil) {
           p.stats.lives--;
@@ -359,8 +369,7 @@ function updateGame(room) {
           p.socket.send(
             JSON.stringify({ type: "stats-update", stats: p.stats })
           );
-          broadcastRoom(room, { type: "player-hit", username: p.username, });
-
+          broadcastRoom(room, { type: "player-hit", username: p.username });
           if (p.stats.lives <= 0) {
             p.stats.isDead = true;
             broadcastRoom(room, { type: "player-dead", username: p.username });
@@ -391,9 +400,8 @@ function checkCollision(
   currentX = null,
   currentY = null
 ) {
-  // UPDATED: Wider Hitbox (40px wide, centered on 64px sprite)
+  // WIDER HITBOX (Matches Client)
   const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
-
   const points = {
     tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
     tr: { x: targetX + HITBOX.x + HITBOX.w, y: targetY + HITBOX.y },
@@ -410,16 +418,13 @@ function checkCollision(
     const tileY = Math.floor(point.y / TILE_SIZE);
 
     let isBlocked = false;
-    // Check bounds
     if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
       isBlocked = true;
     } else {
       const cell = room.map[tileY][tileX];
-      // 1=Wall, 2=Crate, 3=Corner, 4=Stone
       if ([1, 2, 3, 4].includes(cell)) {
         isBlocked = true;
       } else if (cell === 5) {
-        // Bomb Logic
         if (currentX !== null && currentY !== null) {
           const playerRect = {
             left: currentX + HITBOX.x,
@@ -438,7 +443,6 @@ function checkCollision(
             playerRect.right > bombRect.left &&
             playerRect.top < bombRect.bottom &&
             playerRect.bottom > bombRect.top;
-
           if (!isOverlapping) isBlocked = true;
         } else {
           isBlocked = true;
@@ -530,7 +534,7 @@ function cleanRoom(room) {
     explosions: [],
     giftsToExplosion: [],
     active: false,
-  }
+  };
   room.gameInterval = null;
 }
 
@@ -540,13 +544,13 @@ function checkWinCondition(room) {
     const winner = alive[0].username;
     broadcastRoom(room, {
       type: "game-over",
-      winner: winner
+      winner: winner,
     });
     cleanRoom(room);
   } else if (alive.length === 0) {
     broadcastRoom(room, {
       type: "game-over",
-      winner: "draw"
+      winner: "draw",
     });
     cleanRoom(room);
   }
@@ -606,7 +610,7 @@ wss.on("connection", (socket) => {
       let room = findOrCreateRoom();
       if (!room || room.players.some((p) => p.username === username)) {
         return socket.send(
-          JSON.stringify({ type: "join-error", msg: "Username already exist" })
+          JSON.stringify({ type: "join-error", msg: "Username already exists" })
         );
       }
       room.players.push({ username, socket, stats: {}, inputs: {} });
@@ -684,5 +688,5 @@ wss.on("connection", (socket) => {
 });
 
 server.listen(PORT, () =>
-  console.log(`Server running at http://10.1.1.6:${PORT}`)
+  console.log(`Server running at http://localhost:${PORT}`)
 );
