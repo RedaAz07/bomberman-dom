@@ -14,7 +14,7 @@ export function Lobby() {
   const [chat, setChat] = useState([]);
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
-  // console.log(ws, "websoket+++++++++++++++++++++");
+
   useEffect(() => {
     const interval = setInterval(() => { }, 16);
     return () => clearInterval(interval);
@@ -39,13 +39,10 @@ export function Lobby() {
       }
 
       if (data.type === "counter") {
-        console.log(data, "counter data");
         setSec(data.timeLeft);
       }
 
       if (data.type === "start-game") {
-        // console.log(data);
-
         store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username, time: data.time });
         navigate("/map");
       }
@@ -54,7 +51,6 @@ export function Lobby() {
 
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
-    // console.log("dkhl f lobby");
     ws.send(
       JSON.stringify({
         type: "message",

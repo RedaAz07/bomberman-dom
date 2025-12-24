@@ -58,7 +58,7 @@ function stopTimer(room) {
   if (room.timer) clearInterval(room.timer);
   room.timer = null;
   room.timeLeft = null;
-
+  room.disponible = true;
   broadcastRoom(room, {
     type: "counter",
     timeLeft: null,
@@ -183,7 +183,7 @@ function updateGame(room) {
   // 1. PROCESS MOVEMENT (Runs every 20ms for High Precision)
   room.players.forEach((p) => {
     if (p.stats.isDead) return;
-    
+
     const moveDist = MOVEMENT_SPEED + p.stats.speedLevel * 0.6;
 
     // Dynamic Steps to prevent wall tunneling at high speeds
@@ -290,10 +290,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-          ? "down"
-          : p.inputs.ArrowLeft
-          ? "left"
-          : "right",
+            ? "down"
+            : p.inputs.ArrowLeft
+              ? "left"
+              : "right",
         isMoving: isMoving,
       };
     });
@@ -542,13 +542,14 @@ function checkWinCondition(room) {
       type: "game-over",
       winner: winner,
     });
+    cleanRoom(room);
   } else if (alive.length === 0) {
     broadcastRoom(room, {
       type: "game-over",
       winner: "draw",
     });
+    cleanRoom(room);
   }
-  cleanRoom(room);
 }
 
 const base = path.join(process.cwd(), "..", "client");
@@ -662,7 +663,7 @@ wss.on("connection", (socket) => {
     const room = rooms.find((r) => r.id === socket.roomId);
     if (room) {
       const player = room.players.find((p) => p.socket === socket);
-      if (player) {
+      if (player && room.gameState.active) {
         player.stats.isDead = true;
         broadcastRoom(room, { type: "player-dead", username: player.username });
         setTimeout(() => {
