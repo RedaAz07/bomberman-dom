@@ -300,15 +300,15 @@ function updateGame(room) {
   }
 
   // 2. BOMBS
-  room.gameState.bombs.forEach((bomb, idx) => {
+  room.gameState.bombs.forEach((bomb) => {
     if (now - bomb.creationTime > 3000) {
-      bombsToDelete.push(idx);
       handleExplosion(room, bomb);
       gridChanged = true;
       const owner = room.players.find((p) => p.username === bomb.owner);
       if (owner) owner.stats.activeBombs--;
     }
   });
+
   room.gameState.bombs = room.gameState.bombs.filter((b) => !b.hasExploded);
 
   // 3. EXPLOSIONS
@@ -316,23 +316,20 @@ function updateGame(room) {
   room.gameState.explosions.forEach((exp, idx) => {
     if (now - exp.creationTime > 500) {
       explosionsToDelete.push(idx);
-      if (grid[exp.y][exp.x] === TILES.EXPLOSION) {
-        if (room.gameState.giftsToExplosion.length > 0) {
-          const giftIndex = room.gameState.giftsToExplosion.findIndex(
-            (g) => g.x === exp.x && g.y === exp.y
-          );
-          if (giftIndex !== -1) {
-            grid[exp.y][exp.x] =
-              room.gameState.giftsToExplosion[giftIndex].cell;
-            room.gameState.giftsToExplosion.splice(giftIndex, 1);
-          } else {
-            grid[exp.y][exp.x] = TILES.GRASS;
-          }
+      if (room.gameState.giftsToExplosion.length > 0) {
+        const giftIndex = room.gameState.giftsToExplosion.findIndex(
+          (g) => g.x === exp.x && g.y === exp.y
+        );
+        if (giftIndex !== -1) {
+          grid[exp.y][exp.x] = room.gameState.giftsToExplosion[giftIndex].cell;
+          room.gameState.giftsToExplosion.splice(giftIndex, 1);
         } else {
           grid[exp.y][exp.x] = TILES.GRASS;
         }
-        gridChanged = true;
+      } else {
+        grid[exp.y][exp.x] = TILES.GRASS;
       }
+      gridChanged = true;
     }
   });
   for (let i = explosionsToDelete.length - 1; i >= 0; i--) {
@@ -346,7 +343,7 @@ function updateGame(room) {
     const centerY = p.stats.y + 32;
     const tileX = Math.floor(centerX / 50);
     const tileY = Math.floor(centerY / 50);
-    if (!grid[tileY]) return;
+
     const tile = grid[tileY][tileX];
 
     if (tile === TILES.EXPLOSION) {
@@ -452,9 +449,6 @@ function handleExplosion(room, bomb) {
       );
       if (chainedBomb) {
         handleExplosion(room, chainedBomb);
-        room.gameState.bombs = room.gameState.bombs.filter(
-          (b) => b !== chainedBomb
-        );
         const owner = room.players.find(
           (p) => p.username === chainedBomb.owner
         );
@@ -557,12 +551,9 @@ const server = createServer(async (req, res) => {
       reqPath = "index.html";
     } else {
       const cleanUrl = req.url.startsWith("/") ? req.url.slice(1) : req.url;
-      if (cleanUrl.startsWith("framework/")) {
-        reqPath = cleanUrl;
-      } else {
-        reqPath = cleanUrl;
-      }
+      reqPath = cleanUrl;
     }
+
     const fullPath = path.join(base, reqPath);
     const ext = path.extname(fullPath);
     const type = mime[ext] || "text/plain";
@@ -572,6 +563,7 @@ const server = createServer(async (req, res) => {
     res.end(content);
   } catch (err) {
     if (Routes.includes(req.url)) {
+      
       res.writeHead(302, { Location: "/" });
       res.end();
     } else {
@@ -619,11 +611,11 @@ wss.on("connection", (socket) => {
     if (data.type === "place-bomb" && player && !player.stats.isDead) {
       if (player.stats.activeBombs < player.stats.maxBombs) {
         const hitBoxCenterX = player.stats.x + 32;
-        const hitBoxCenterY = player.stats.y + 50;
+        const hitBoxCenterY = player.stats.y + 40;
         const bx = Math.floor(hitBoxCenterX / TILE_SIZE);
         const by = Math.floor(hitBoxCenterY / TILE_SIZE);
 
-        if (room.map[by] && room.map[by][bx] === TILES.GRASS) {
+        if (room.map[by][bx] === TILES.GRASS) {
           room.map[by][bx] = TILES.BOMB;
           player.stats.activeBombs++;
           room.gameState.bombs.push({

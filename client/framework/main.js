@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, Store } from "./core/hooks.js";
 import { jsx } from "./core/jsx.js";
-import { addRoute, navigate } from "./core/route.js";
+import { addRoute, navigate, replace } from "./core/route.js";
 import { handleRouteChange } from "./core/route.js";
+window.addEventListener("popstate", () => {
+  handleRouteChange(window.location.pathname);
+});
 
 /**
  * Initializes the routing system by setting up hash change listeners
@@ -19,6 +22,6 @@ export function startTransition(isHashchangeListening) {
     handleRouteChange();
     window.addEventListener("hashchange", handleRouteChange);
   }
-  handleRouteChange("/");
+  handleRouteChange(window.location.pathname);
 }
-export { useState, useEffect, useRef, jsx, addRoute, Store, navigate };
+export { useState, useEffect, useRef, jsx, addRoute, replace, Store, navigate };

@@ -2,8 +2,8 @@ import {
   jsx,
   useState,
   useEffect,
-  navigate,
   Store,
+  replace,
 } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
 export const store = Store({ map: [], collisionMap: [], bom: false, players: [] });
@@ -15,7 +15,7 @@ export function Lobby() {
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
 
-  if (!ws.username) navigate("/");
+  if (!ws.username) replace("/");
 
   useEffect(() => {
     ws.onmessage = (event) => {
@@ -40,7 +40,7 @@ export function Lobby() {
 
       if (data.type === "start-game") {
         store.set({ map: data.map, collisionMap: data.collisionMap, players: data.players, username: ws.username, time: data.time });
-        navigate("/map");
+        replace("/map");
       }
     };
   }, []);

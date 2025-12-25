@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "../framework/main.js";
+import { replace, useEffect, useRef, useState } from "../framework/main.js";
 import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
-let count = 0;
 const tileClass = {
   0: "tile tile-grass",
   1: "tile tile-wall-vertical",
@@ -15,19 +14,6 @@ const tileClass = {
   7: "tile tile-speed",
   8: "tile tile-bomb-up",
   9: "tile tile-power",
-};
-
-const tileTypes = {
-  0: "grass",
-  1: "wall-vertical",
-  2: "braml",
-  3: "wall-corner",
-  4: "stone",
-  5: "bomb",
-  6: "explosion",
-  7: "speed",
-  8: "bomb-up",
-  9: "power",
 };
 
 // --- PHYSICS HELPER (Matches Server Logic) ---
@@ -98,6 +84,11 @@ function lerp(start, end, t) {
 }
 
 export function game() {
+  const storedData = store.get();
+  if (!storedData || !storedData.map) {
+    replace("/"); // Use replace to avoid creating history loop
+    return jsx("div", null, "Loading...");
+  }
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
@@ -321,6 +312,7 @@ export function game() {
     window.addEventListener("resize", handleResize);
 
     let lastTime = 0;
+    let animationFrameId;
     function loop(timeStamp) {
       if (!dead) {
         const deltaTime = timeStamp - lastTime;
@@ -445,11 +437,6 @@ export function game() {
 
         bombElementsRef.current.forEach((el, key) => {
           if (el) {
-            if (count < 5) {
-              console.log(el, "el/////////////////");
-              count++;
-            }
-
             let startTime = bombTimersRef.current.get(key);
             if (!startTime) {
               startTime = timeStamp;
@@ -466,9 +453,20 @@ export function game() {
           if (el) el.style.backgroundPosition = `-${expFrame * 50}px -150px`;
         });
       }
-      requestAnimationFrame(loop);
+      animationFrameId = requestAnimationFrame(loop);
     }
     loop(0);
+    return () => {
+      console.log("Cleaning up Game...");
+      cancelAnimationFrame(animationFrameId);
+      clearInterval(timerInterval);
+      window.removeEventListener("resize", handleResize);
+      ws.onmessage = null;
+      ws.close();
+      setTimeout(() => {
+        store.set({ map: null, players: [] });
+      }, 0);
+    };
   }, []);
 
   return gameResult

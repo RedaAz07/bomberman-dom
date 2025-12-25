@@ -57,3 +57,14 @@ export const navigate = (path) => {
     render(notFound);
   }
 };
+// --- NEW FUNCTION ---
+// Replaces the current history entry instead of adding a new one.
+// This prevents the "Back" button from going to the previous page (Lobby).
+export const replace = (path) => {
+  history.replaceState(null, null, `${path}`);
+  if (routes[path]) {
+    render(routes[path]);
+  } else {
+    render(notFound);
+  }
+};
