@@ -259,8 +259,7 @@ function updateGame(room) {
         p.inputs.ArrowLeft ||
         p.inputs.ArrowRight;
 
-      if (!p.lastSync)
-        p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
+      p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
 
       // We check if position changed since LAST BROADCAST
       if (
@@ -290,10 +289,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-            ? "down"
-            : p.inputs.ArrowLeft
-              ? "left"
-              : "right",
+          ? "down"
+          : p.inputs.ArrowLeft
+          ? "left"
+          : "right",
         isMoving: isMoving,
       };
     });
@@ -301,7 +300,6 @@ function updateGame(room) {
   }
 
   // 2. BOMBS
-  const bombsToDelete = [];
   room.gameState.bombs.forEach((bomb, idx) => {
     if (now - bomb.creationTime > 3000) {
       bombsToDelete.push(idx);
@@ -311,9 +309,7 @@ function updateGame(room) {
       if (owner) owner.stats.activeBombs--;
     }
   });
-  for (let i = bombsToDelete.length - 1; i >= 0; i--) {
-    room.gameState.bombs.splice(bombsToDelete[i], 1);
-  }
+  room.gameState.bombs = room.gameState.bombs.filter((b) => !b.hasExploded);
 
   // 3. EXPLOSIONS
   const explosionsToDelete = [];
@@ -389,13 +385,7 @@ function updateGame(room) {
   if (gridChanged) broadcastRoom(room, { type: "grid-update", map: grid });
 }
 
-function checkCollision(
-  room,
-  targetX,
-  targetY,
-  currentX = null,
-  currentY = null
-) {
+function checkCollision(room, targetX, targetY, currentX, currentY) {
   // WIDER HITBOX (Matches Client)
   const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
   const points = {
@@ -421,28 +411,24 @@ function checkCollision(
       if ([1, 2, 3, 4].includes(cell)) {
         isBlocked = true;
       } else if (cell === 5) {
-        if (currentX !== null && currentY !== null) {
-          const playerRect = {
-            left: currentX + HITBOX.x,
-            right: currentX + HITBOX.x + HITBOX.w,
-            top: currentY + HITBOX.y,
-            bottom: currentY + HITBOX.y + HITBOX.h,
-          };
-          const bombRect = {
-            left: tileX * TILE_SIZE,
-            right: (tileX + 1) * TILE_SIZE,
-            top: tileY * TILE_SIZE,
-            bottom: (tileY + 1) * TILE_SIZE,
-          };
-          const isOverlapping =
-            playerRect.left < bombRect.right &&
-            playerRect.right > bombRect.left &&
-            playerRect.top < bombRect.bottom &&
-            playerRect.bottom > bombRect.top;
-          if (!isOverlapping) isBlocked = true;
-        } else {
-          isBlocked = true;
-        }
+        const playerRect = {
+          left: currentX + HITBOX.x,
+          right: currentX + HITBOX.x + HITBOX.w,
+          top: currentY + HITBOX.y,
+          bottom: currentY + HITBOX.y + HITBOX.h,
+        };
+        const bombRect = {
+          left: tileX * TILE_SIZE,
+          right: (tileX + 1) * TILE_SIZE,
+          top: tileY * TILE_SIZE,
+          bottom: (tileY + 1) * TILE_SIZE,
+        };
+        const isOverlapping =
+          playerRect.left < bombRect.right &&
+          playerRect.right > bombRect.left &&
+          playerRect.top < bombRect.bottom &&
+          playerRect.bottom > bombRect.top;
+        if (!isOverlapping) isBlocked = true;
       }
     }
     collisions[key] = isBlocked;
@@ -455,7 +441,7 @@ function handleExplosion(room, bomb) {
   const grid = room.map;
   const { x, y, range } = bomb;
   const now = Date.now();
-
+  bomb.hasExploded = true;
   const explodeTile = (tx, ty) => {
     if (tx < 0 || ty < 0 || ty >= 15 || tx >= 15) return true;
     const cell = grid[ty][tx];
@@ -505,10 +491,10 @@ function handleExplosion(room, bomb) {
   explodeTile(x, y);
 
   const dirs = [
-    { dx: 0, dy: 1 },
-    { dx: 0, dy: -1 },
-    { dx: 1, dy: 0 },
-    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 }, // down
+    { dx: 0, dy: -1 }, // up
+    { dx: 1, dy: 0 }, // right
+    { dx: -1, dy: 0 }, // left
   ];
   dirs.forEach((d) => {
     for (let i = 1; i <= range; i++) {

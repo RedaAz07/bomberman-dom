@@ -180,7 +180,7 @@ export function game() {
     if (e.target.tagName === "INPUT") {
       return;
     }
-    if (FRAMES[e.key] && !e.repeat) {
+    if (FRAMES[e.key]) {
       inputsRef.current[e.key] = true;
       if (ws.readyState === 1)
         ws.send(JSON.stringify({ type: "input", key: e.key, state: true }));
