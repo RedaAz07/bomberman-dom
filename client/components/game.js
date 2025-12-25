@@ -86,8 +86,10 @@ function lerp(start, end, t) {
 export function game() {
   const storedData = store.get();
   if (!storedData || !storedData.map) {
-    replace("/"); // Use replace to avoid creating history loop
-    return jsx("div", null, "Loading...");
+    useEffect(() => {
+      replace("/");
+    }, []);
+    return jsx("div", null, "Redirecting to Join Page...");
   }
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");

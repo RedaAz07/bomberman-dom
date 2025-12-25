@@ -62,7 +62,10 @@ export const navigate = (path) => {
 // This prevents the "Back" button from going to the previous page (Lobby).
 export const replace = (path) => {
   history.replaceState(null, null, `${path}`);
+  console.log(path,"path");
+  
   if (routes[path]) {
+    console.log("Rendering route:", path);
     render(routes[path]);
   } else {
     render(notFound);
