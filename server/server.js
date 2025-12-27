@@ -78,7 +78,7 @@ function broadcastRoom(room, obj) {
 function startGameTimer(room) {
   if (room.players.length === 1) return;
   if (room.players.length === 2) room.timeLeft = 30;
-  if (room.players.length === 4) room.timeLeft = 1;
+  if (room.players.length === 4) room.timeLeft = 10;
 
   if (room.timer) clearInterval(room.timer);
 
@@ -370,9 +370,9 @@ function updateGame(room) {
       }
     }
     if (tile >= 7 && tile <= 9) {
-      if (tile === 7 && p.stats.speedLevel < 4) p.stats.speedLevel++;
-      if (tile === 8 && p.stats.range < 4) p.stats.range++;
-      if (tile === 9 && p.stats.maxBombs < 4) p.stats.maxBombs++;
+      if (tile === 7 && p.stats.speedLevel < 3) p.stats.speedLevel++;
+      if (tile === 8 && p.stats.range < 3) p.stats.range++;
+      if (tile === 9 && p.stats.maxBombs < 3) p.stats.maxBombs++;
       grid[tileY][tileX] = TILES.GRASS;
       gridChanged = true;
       p.socket.send(JSON.stringify({ type: "stats-update", stats: p.stats }));
@@ -559,7 +559,11 @@ const server = createServer(async (req, res) => {
     const type = mime[ext] || "text/plain";
     const isBinary = type.startsWith("image/");
     const content = await fs.readFile(fullPath, isBinary ? null : "utf8");
-    res.writeHead(200, { "Content-Type": type });
+    const headers = { "Content-Type": type };
+    if (isBinary) {
+      headers["Cache-Control"] = "public, max-age=86400";
+    }
+    res.writeHead(200, headers);
     res.end(content);
   } catch (err) {
     if (Routes.includes(req.url)) {

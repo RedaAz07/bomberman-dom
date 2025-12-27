@@ -3,6 +3,7 @@ import { jsx } from "../framework/main.js";
 import { store } from "./lobby.js";
 import { ws } from "../assets/js/ws.js";
 import { getTileStyle } from "../utils/map.js";
+
 const tileClass = {
   0: "tile tile-grass",
   1: "tile tile-wall-vertical",
@@ -17,11 +18,8 @@ const tileClass = {
 };
 
 // --- PHYSICS HELPER (Matches Server Logic) ---
-// [game.js]
-
 function checkCollision(map, targetX, targetY, currentX, currentY) {
   const TILE_SIZE = 50;
-  // UPDATED: Width 40, Offset 12 (Matches Server)
   const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
 
   const points = {
@@ -44,33 +42,28 @@ function checkCollision(map, targetX, targetY, currentX, currentY) {
     if (tileY < 0 || tileY >= 15 || tileX < 0 || tileX >= 15) {
       isBlocked = true;
     } else {
-      const row = map[tileY];
-      const cell = row ? row[tileX] : 1;
+      const cell = map[tileY][tileX];
       if ([1, 2, 3, 4].includes(cell)) {
         isBlocked = true;
       } else if (cell === 5) {
-        if (currentX !== null && currentY !== null) {
-          const playerRect = {
-            left: currentX + HITBOX.x,
-            right: currentX + HITBOX.x + HITBOX.w,
-            top: currentY + HITBOX.y,
-            bottom: currentY + HITBOX.y + HITBOX.h,
-          };
-          const bombRect = {
-            left: tileX * TILE_SIZE,
-            right: (tileX + 1) * TILE_SIZE,
-            top: tileY * TILE_SIZE,
-            bottom: (tileY + 1) * TILE_SIZE,
-          };
-          const isOverlapping =
-            playerRect.left < bombRect.right &&
-            playerRect.right > bombRect.left &&
-            playerRect.top < bombRect.bottom &&
-            playerRect.bottom > bombRect.top;
-          if (!isOverlapping) isBlocked = true;
-        } else {
-          isBlocked = true;
-        }
+        const playerRect = {
+          left: currentX + HITBOX.x,
+          right: currentX + HITBOX.x + HITBOX.w,
+          top: currentY + HITBOX.y,
+          bottom: currentY + HITBOX.y + HITBOX.h,
+        };
+        const bombRect = {
+          left: tileX * TILE_SIZE,
+          right: (tileX + 1) * TILE_SIZE,
+          top: tileY * TILE_SIZE,
+          bottom: (tileY + 1) * TILE_SIZE,
+        };
+        const isOverlapping =
+          playerRect.left < bombRect.right &&
+          playerRect.right > bombRect.left &&
+          playerRect.top < bombRect.bottom &&
+          playerRect.bottom > bombRect.top;
+        if (!isOverlapping) isBlocked = true;
       }
     }
     collisions[key] = isBlocked;
@@ -97,7 +90,10 @@ export function game() {
   const [speedLevel, setSpeedLevel] = useState(1);
   const [bombs, setBombs] = useState(1);
   const [bombRange, setBombRange] = useState(1);
-  const [Timer, setTimer] = useState("00:00");
+
+  // OPTIMIZATION: Removed Timer state to prevent re-renders
+  // const [Timer, setTimer] = useState("00:00");
+
   const [dead, setDead] = useState(false);
   const [gameResult, setGameResult] = useState(null);
 
@@ -105,6 +101,7 @@ export function game() {
   const bombTimersRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
   const mapRef = useRef(null);
+  const timerRef = useRef(null); // New Ref for Timer
 
   const map = store.get().map;
   const playersList = store.get().players;
@@ -113,7 +110,6 @@ export function game() {
 
   const playerStateRef = useRef(
     playersList.map((p, i) => {
-      // FIX: Exact spawn coordinates matching server (TileCenter - Offset)
       const T1 = 75;
       const T13 = 13 * 50 + 25; // 675
       const offX = 32;
@@ -125,7 +121,7 @@ export function game() {
         { x: T13 - offX, y: T13 - offY }, // BR (643, 625)
         { x: T1 - offX, y: T13 - offY }, // BL (43, 625)
       ];
-      const start = spawns[i] || { x: 0, y: 0 };
+      const start = spawns[i];
       return {
         x: start.x,
         y: start.y,
@@ -200,11 +196,14 @@ export function game() {
         obj.min++;
         obj.sec = 0;
       }
-      setTimer(
+      // OPTIMIZATION: Direct DOM update to avoid re-render
+      const timeString =
         String(obj.min).padStart(2, "0") +
-          ":" +
-          String(obj.sec).padStart(2, "0")
-      );
+        ":" +
+        String(obj.sec).padStart(2, "0");
+      if (timerRef.current) {
+        timerRef.current.textContent = timeString;
+      }
     }, 1000);
 
     ws.onmessage = (event) => {
@@ -237,7 +236,6 @@ export function game() {
           const isMe = move.username === ws.username;
 
           if (isMe) {
-            // RECONCILIATION: RELAXED THRESHOLD TO 5px
             const dist = Math.hypot(pState.x - move.x, pState.y - move.y);
             if (dist > 15) {
               pState.x = move.x;
@@ -250,7 +248,6 @@ export function game() {
             pState.targetX = move.x;
             pState.targetY = move.y;
             pState.direction = move.direction;
-            // FIX: Sync isMoving state directly from server to stop ghost animations
             pState.isMoving = move.isMoving;
           }
         });
@@ -457,7 +454,7 @@ export function game() {
       }
       animationFrameId = requestAnimationFrame(loop);
     }
-    loop(0);
+    animationFrameId = requestAnimationFrame(loop);
     return () => {
       console.log("Cleaning up Game...");
       cancelAnimationFrame(animationFrameId);
@@ -480,7 +477,7 @@ export function game() {
           { className: "result-content" },
           jsx(
             "div",
-            { className: "result-icon" },
+            { className: "result-icon animation" },
             gameResult.type === "win"
               ? "🎉"
               : gameResult.type === "draw"
@@ -539,7 +536,7 @@ export function game() {
             jsx(
               "div",
               { className: "hud-stat lives-stat" },
-              jsx("div", { className: "stat-icon" }, "❤️"),
+              jsx("div", { className: "stat-icon animation" }, "❤️"),
               jsx(
                 "div",
                 { className: "stat-info" },
@@ -598,7 +595,8 @@ export function game() {
             jsx(
               "div",
               { className: "timer-display" },
-              jsx("div", { className: "timer-value1" }, Timer)
+              // OPTIMIZATION: Timer Ref instead of state
+              jsx("div", { className: "timer-value1", ref: timerRef }, "00:00")
             )
           )
         ),
@@ -657,11 +655,9 @@ export function game() {
                         key: `${rowIndex}-${colIndex}`,
                         ref: (el) => {
                           const key = `${rowIndex}-${colIndex}`;
-                          console.log(bombElementsRef.current.get(key));
-
+                          // OPTIMIZATION: Removed console.log
                           if (el && el.classList.contains("tile-bomb")) {
                             bombElementsRef.current.set(key, el);
-                            console.log(bombElementsRef.current, "/////////");
                           } else {
                             bombElementsRef.current.delete(key);
                             bombTimersRef.current.delete(key);

@@ -13,9 +13,7 @@ export function Lobby() {
   const [chat, setChat] = useState([]);
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
-  console.log("WS USERNAME IN LOBBY:", ws.username);
   if (!ws.username) {
-    console.log("No username found, redirecting to join page.");
     useEffect(() => {
       ws.close();
       replace("/");
@@ -101,13 +99,6 @@ export function Lobby() {
           "ul",
           { className: "players-list" },
           ...players.map((p) => jsx("li", { className: "player-item" }, p))
-        ),
-        jsx(
-          "div",
-          { className: "player-count" },
-          `Total: ${players.length} ${
-            players.length === 1 ? "player" : "players"
-          }`
         )
       ),
       jsx(
@@ -136,7 +127,7 @@ export function Lobby() {
             jsx(
               "div",
               { className: "rule-item" },
-              jsx("span", { className: "rule-icon" }, "💥"),
+              jsx("span", { className: "rule-icon animation" }, "💥"),
               jsx("span", { className: "rule-text" }, "Destroy Walls & Enemies")
             ),
             jsx(

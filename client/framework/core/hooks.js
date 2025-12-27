@@ -74,7 +74,6 @@ export function useState(initialValue) {
     if (typeof newValue === "function") {
       states[currentIndex] = newValue(states[currentIndex]);
     } else {
-      // console.log(states, currentIndex);
 
       states[currentIndex] = newValue;
     }
@@ -139,7 +138,6 @@ export function useEffect(callback, dependencies) {
         deps: dependencies,
         cleanup: cleanupFunction, // <--- THIS is the "return" value
       };
-      // console.log("qsdqs", effects, currentIndex);
     });
   }
 

@@ -92,7 +92,6 @@ function reconcileChildren(parent, newChildren, oldChildren) {
           ) {
             oldChildren[index].props.ref.current = null;
           } else if (typeof oldChildren[index].props.ref === "function") {
-            console.log("111111111111111111111111111111111");
             
             oldChildren[index].props.ref(null);
           }
@@ -117,7 +116,6 @@ function reconcileChildren(parent, newChildren, oldChildren) {
           ) {
             oldChild.props.ref.current = null;
           } else if (typeof oldChild.props.ref === "function") {
-            console.log("222222222222222222222222222222222222");
 
             oldChild.props.ref(null);
           }
@@ -158,7 +156,6 @@ function updateElementProps(el, newNode, oldNode) {
         ) {
           oldNode.props.ref.current = null;
         } else if (typeof oldNode.props.ref === "function") {
-            console.log("33333333333333333333333333333333333");
           
           oldNode.props.ref(null);
         }
@@ -245,7 +242,6 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
       if (typeof oldNode.props.ref === "object" && oldNode.props.ref !== null) {
         oldNode.props.ref.current = null;
       } else if (typeof oldNode.props.ref === "function") {
-            console.log("44444444444444444444444444444444");
 
         oldNode.props.ref(null);
       }
@@ -260,7 +256,6 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
       if (typeof oldNode.props.ref === "object" && oldNode.props.ref !== null) {
         oldNode.props.ref.current = null;
       } else if (typeof oldNode.props.ref === "function") {
-            console.log("5555555555555555555555555555555555");
         oldNode.props.ref(null);
       }
     }

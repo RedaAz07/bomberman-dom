@@ -12,9 +12,8 @@ export function getTileStyle(
   if (row > 0 && row < ROWS - 1 && tile === 1) {
     if (col < COLS - 1) {
       return {
-        backgroundImage: `url("assets/images/tile5.jpg")`,
         backgroundSize: "contain",
-        transform: `translate3d(${x}px, ${y}px, 0)`,
+        transform: `translate3d(${x}px, ${y}px, 0) rotate(270deg)`,
       };
     }
     return { transform: `translate3d(${x}px, ${y}px, 0) rotate(90deg)` };
@@ -27,7 +26,6 @@ export function getTileStyle(
     }
 
     return {
-      backgroundImage: `url("assets/images/tile5.jpg")`,
       backgroundSize: "contain",
       transform: `translate3d(${x}px, ${y}px, 0)`,
     };

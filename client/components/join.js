@@ -19,6 +19,7 @@ export function Join() {
     e.target.value = "";
     if (e.key != "Enter") e.target.previousSibling.value = "";
   };
+
   useEffect(() => {
     reconnect(); // 1. Close old socket, open new one
     ws.onmessage = (event) => {
@@ -59,7 +60,7 @@ export function Join() {
         onclick: (e) => {
           handleJoin(e);
         },
-        className: "join-button",
+        className: "join-button animation",
       },
       "🎮 JOIN GAME 🎮"
     ),
