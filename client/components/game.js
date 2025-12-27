@@ -109,7 +109,7 @@ export function game() {
   const latestGridRef = useRef(map);
 
   const playerStateRef = useRef(
-    playersList.map((p, i) => {
+    playersList.map((_, i) => {
       const T1 = 75;
       const T13 = 13 * 50 + 25; // 675
       const offX = 32;
