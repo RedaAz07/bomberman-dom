@@ -2,9 +2,19 @@ import { jsx, useEffect, useState } from "../framework/main.js";
 import { reconnect, ws } from "../assets/js/ws.js";
 import { navigate } from "../framework/main.js";
 
+/**
+ * Join component for the game entry screen.
+ * Allows users to enter a username and join the lobby.
+ * @returns {Object} JSX element for the join screen.
+ */
 export function Join() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  /**
+   * Handles the join game action.
+   * Sends a join request to the server.
+   * @param {Event} e - The event object.
+   */
   const handleJoin = (e) => {
     if (!name.trim() || name.trim() >= 10) return;
     ws.username = name.trim();

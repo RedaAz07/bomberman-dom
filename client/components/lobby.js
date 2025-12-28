@@ -7,6 +7,11 @@ export const store = Store({
   players: [],
 });
 
+/**
+ * Lobby component where players wait for the game to start.
+ * Displays connected players and chat.
+ * @returns {Object} JSX element for the lobby.
+ */
 export function Lobby() {
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
@@ -55,6 +60,10 @@ export function Lobby() {
     };
   }, []);
 
+  /**
+   * Sends a chat message in the lobby.
+   * @param {Event} e - The event object.
+   */
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
     ws.send(

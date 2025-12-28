@@ -1,7 +1,16 @@
 const TILE_SIZE = 50;
 const ROWS = 15;
 const COLS = 15;
-// Example function to determine style based on position and tile type
+/**
+ * Calculates the CSS style for a map tile based on its type and position.
+ * Handles rotation and positioning of tiles.
+ * @param {number} row - The row index.
+ * @param {number} col - The column index.
+ * @param {number} tile - The tile type ID.
+ * @param {number} [x] - The x pixel position.
+ * @param {number} [y] - The y pixel position.
+ * @returns {Object} CSS style object.
+ */
 export function getTileStyle(
   row,
   col,

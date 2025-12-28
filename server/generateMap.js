@@ -1,4 +1,9 @@
-//this function will generate a random map based on rows and cols
+/**
+ * Generates a random game map with walls, obstacles, and open spaces.
+ * @param {number} rows - Number of rows.
+ * @param {number} cols - Number of columns.
+ * @returns {Object} Object containing the map grid and collision map.
+ */
 export function generateMap(rows, cols) {
   const map = [];
   const collisionMap = [];

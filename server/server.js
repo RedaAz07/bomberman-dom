@@ -4,10 +4,10 @@ import path from "node:path";
 import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
 
-const PORT = 3000;
-const TILE_SIZE = 50;
 
 // --- CONFIGURATION ---
+const PORT = 3000;
+const TILE_SIZE = 50;
 const GAME_TICK = 20; // Physics runs at 50 FPS (20ms) - High Precision
 const BROADCAST_INTERVAL = 2; // Network runs at 25 FPS (40ms) - Throttled to save bandwidth
 const MOVEMENT_SPEED = 2.4;
@@ -27,6 +27,10 @@ const TILES = {
 
 let rooms = [];
 
+/**
+ * Creates a new game room with a generated map.
+ * @returns {Object} The created room object.
+ */
 function createRoom() {
   const { map, collisionMap } = generateMap(15, 15);
 
@@ -43,17 +47,25 @@ function createRoom() {
       active: false,
     },
     gameInterval: null,
-    tickCount: 0, // NEW: Track ticks for throttling
+    tickCount: 0, // Track ticks for throttling
   };
   rooms.push(room);
   return room;
 }
 
+/**
+ * Finds an available room or creates a new one if none exist.
+ * @returns {Object} An available room.
+ */
 function findOrCreateRoom() {
   let room = rooms.find((r) => r.disponible && r.players.length < 4);
   if (!room) room = createRoom();
   return room;
 }
+/**
+ * Stops the countdown timer for a room.
+ * @param {Object} room - The room object.
+ */
 function stopTimer(room) {
   if (room.timer) clearInterval(room.timer);
   room.timer = null;
@@ -65,6 +77,11 @@ function stopTimer(room) {
   });
 }
 
+/**
+ * Broadcasts a message to all players in a room.
+ * @param {Object} room - The room object.
+ * @param {Object} obj - The message object to send.
+ */
 function broadcastRoom(room, obj) {
   const msg = JSON.stringify(obj);
   for (const p of room.players) {
@@ -74,7 +91,10 @@ function broadcastRoom(room, obj) {
   }
 }
 
-// --- TIMER ---
+/**
+ * Starts the game start countdown timer.
+ * @param {Object} room - The room object.
+ */
 function startGameTimer(room) {
   if (room.players.length === 1) return;
   if (room.players.length === 2) room.timeLeft = 30;
@@ -105,8 +125,10 @@ function startGameTimer(room) {
     }
   }, 1000);
 }
-// --- SERVER PHYSICS & GAME LOGIC ---
-
+/**
+ * Initializes the game state and starts the game loop.
+ * @param {Object} room - The room object.
+ */
 function startGame(room) {
   room.gameState.active = true;
   room.tickCount = 0; // Reset tick counter
@@ -172,6 +194,11 @@ function startGame(room) {
   room.gameInterval = setInterval(() => updateGame(room), GAME_TICK);
 }
 
+/**
+ * Updates the game state for a single tick.
+ * Handles movement, collisions, bombs, and interactions.
+ * @param {Object} room - The room object.
+ */
 function updateGame(room) {
   const now = Date.now();
   room.tickCount++; // Increment tick
@@ -382,8 +409,16 @@ function updateGame(room) {
   if (gridChanged) broadcastRoom(room, { type: "grid-update", map: grid });
 }
 
+/**
+ * Checks for collisions on the server side.
+ * @param {Object} room - The room object.
+ * @param {number} targetX - Target X coordinate.
+ * @param {number} targetY - Target Y coordinate.
+ * @param {number} currentX - Current X coordinate.
+ * @param {number} currentY - Current Y coordinate.
+ * @returns {Object} Collision result.
+ */
 function checkCollision(room, targetX, targetY, currentX, currentY) {
-  // WIDER HITBOX (Matches Client)
   const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
   const points = {
     tl: { x: targetX + HITBOX.x, y: targetY + HITBOX.y },
@@ -434,6 +469,11 @@ function checkCollision(room, targetX, targetY, currentX, currentY) {
   return { hasCollision, collisions };
 }
 
+/**
+ * Handles bomb explosions and their effects on the map and players.
+ * @param {Object} room - The room object.
+ * @param {Object} bomb - The bomb object.
+ */
 function handleExplosion(room, bomb) {
   const grid = room.map;
   const { x, y, range } = bomb;
@@ -496,6 +536,10 @@ function handleExplosion(room, bomb) {
     }
   });
 }
+/**
+ * Resets the room state after a game ends.
+ * @param {Object} room - The room object.
+ */
 function cleanRoom(room) {
   const { map, collisionMap } = generateMap(15, 15);
   room.map = map;
@@ -514,6 +558,10 @@ function cleanRoom(room) {
   room.gameInterval = null;
 }
 
+/**
+ * Checks if the game has a winner or is a draw.
+ * @param {Object} room - The room object.
+ */
 function checkWinCondition(room) {
   const alive = room.players.filter((p) => !p.stats.isDead);
   if (alive.length === 1) {

@@ -17,7 +17,15 @@ const tileClass = {
   9: "tile tile-power",
 };
 
-// --- PHYSICS HELPER (Matches Server Logic) ---
+/**
+ * Checks for collisions between a target position and the map/objects.
+ * @param {Array} map - The game map grid.
+ * @param {number} targetX - The target X coordinate.
+ * @param {number} targetY - The target Y coordinate.
+ * @param {number} currentX - The current X coordinate.
+ * @param {number} currentY - The current Y coordinate.
+ * @returns {Object} Collision data including boolean flag and specific collision points.
+ */
 function checkCollision(map, targetX, targetY, currentX, currentY) {
   const TILE_SIZE = 50;
   const HITBOX = { x: 12, y: 20, w: 40, h: 40 };
@@ -72,10 +80,22 @@ function checkCollision(map, targetX, targetY, currentX, currentY) {
   return { hasCollision, collisions };
 }
 
+/**
+ * Linear interpolation function for smooth movement.
+ * @param {number} start - Start value.
+ * @param {number} end - End value.
+ * @param {number} t - Interpolation factor (0-1).
+ * @returns {number} Interpolated value.
+ */
 function lerp(start, end, t) {
   return start * (1 - t) + end * t;
 }
 
+/**
+ * Main Game component.
+ * Handles game state, rendering, and user interactions.
+ * @returns {Object} JSX element for the game.
+ */
 export function game() {
   const storedData = store.get();
   if (!storedData || !storedData.map) {
@@ -152,6 +172,10 @@ export function game() {
     ArrowDown: { row: 10, col: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
   };
 
+  /**
+   * Sends a chat message to the server.
+   * @param {Event} e - The event object.
+   */
   const sendMsg = (e) => {
     if (!msg.trim() || msg.trim().length > 30) return;
     if (ws.readyState === 1) ws.send(JSON.stringify({ type: "message", msg }));
@@ -160,11 +184,18 @@ export function game() {
     if (e.key != "Enter") e.target.previousSibling.value = "";
   };
 
+  /**
+   * Sends a request to place a bomb.
+   */
   function placeBomb() {
     if (ws.readyState === 1)
       ws.send(JSON.stringify({ type: "place-bomb", roomId: ws.roomId }));
   }
 
+  /**
+   * Handles key down events for movement and actions.
+   * @param {KeyboardEvent} e - The keyboard event.
+   */
   function handleKeyDown(e) {
     if (e.target.tagName === "INPUT") {
       return;
@@ -177,6 +208,10 @@ export function game() {
     if (e.key === " " && !e.repeat) placeBomb();
   }
 
+  /**
+   * Handles key up events to stop movement.
+   * @param {KeyboardEvent} e - The keyboard event.
+   */
   function handleKeyUp(e) {
     if (e.target.tagName === "INPUT") {
       return;
@@ -301,6 +336,9 @@ export function game() {
 
     const width = 1500;
     const height = 1500;
+    /**
+     * Resizes the game scale based on window size.
+     */
     function handleResize() {
       if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
         setScale(1);
@@ -315,6 +353,10 @@ export function game() {
 
     let lastTime = 0;
     let animationFrameId;
+    /**
+     * Main game loop for animation and updates.
+     * @param {number} timeStamp - Current timestamp.
+     */
     function loop(timeStamp) {
       if (!dead) {
         const deltaTime = timeStamp - lastTime;
