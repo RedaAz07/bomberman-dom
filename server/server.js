@@ -4,10 +4,10 @@ import path from "node:path";
 import { WebSocketServer } from "ws";
 import { generateMap } from "./generateMap.js";
 
-
-// --- CONFIGURATION ---
 const PORT = 3000;
 const TILE_SIZE = 50;
+
+// --- CONFIGURATION ---
 const GAME_TICK = 20; // Physics runs at 50 FPS (20ms) - High Precision
 const BROADCAST_INTERVAL = 2; // Network runs at 25 FPS (40ms) - Throttled to save bandwidth
 const MOVEMENT_SPEED = 2.4;
@@ -47,7 +47,7 @@ function createRoom() {
       active: false,
     },
     gameInterval: null,
-    tickCount: 0, // Track ticks for throttling
+    tickCount: 0, // NEW: Track ticks for throttling
   };
   rooms.push(room);
   return room;
@@ -90,6 +90,7 @@ function broadcastRoom(room, obj) {
     }
   }
 }
+
 
 /**
  * Starts the game start countdown timer.
@@ -316,10 +317,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-          ? "down"
-          : p.inputs.ArrowLeft
-          ? "left"
-          : "right",
+            ? "down"
+            : p.inputs.ArrowLeft
+              ? "left"
+              : "right",
         isMoving: isMoving,
       };
     });
@@ -615,7 +616,7 @@ const server = createServer(async (req, res) => {
     res.end(content);
   } catch (err) {
     if (Routes.includes(req.url)) {
-      
+
       res.writeHead(302, { Location: "/" });
       res.end();
     } else {
@@ -629,7 +630,13 @@ const wss = new WebSocketServer({ server });
 
 wss.on("connection", (socket) => {
   socket.on("message", (raw) => {
-    const data = JSON.parse(raw);
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (err) {
+      console.error("Error parsing WebSocket message:", err);
+      return;
+    }
 
     if (data.type === "join") {
       const username = data.username.trim();

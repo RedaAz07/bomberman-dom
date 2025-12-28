@@ -83,19 +83,19 @@ export function Lobby() {
     { className: "container lobby-wrapper" },
 
     roomId !== null &&
-      jsx(
-        "div",
-        { className: "room-id" },
-        "Welcome to game lobby (Room: " + roomId + ")"
-      ),
+    jsx(
+      "div",
+      { className: "room-id" },
+      "Welcome to game lobby (Room: " + roomId + ")"
+    ),
     sec !== null &&
-      jsx(
-        "div",
-        { className: "countdown-timer" },
-        jsx("span", { className: "timer-label" }, "Game Starting In"),
-        jsx("span", { className: "timer-value" }, sec),
-        jsx("span", { className: "timer-label" }, "seconds")
-      ),
+    jsx(
+      "div",
+      { className: "countdown-timer" },
+      jsx("span", { className: "timer-label" }, "Game Starting In"),
+      jsx("span", { className: "timer-value" }, sec),
+      jsx("span", { className: "timer-label" }, "seconds")
+    ),
 
     jsx(
       "div",
@@ -108,7 +108,7 @@ export function Lobby() {
           "ul",
           { className: "players-list" },
           ...players.map((p) => jsx("li", { className: "player-item" }, p))
-        )
+        ), jsx("div", { className: "player-count" }, "Total Players: " + players.length)
       ),
       jsx(
         "div",

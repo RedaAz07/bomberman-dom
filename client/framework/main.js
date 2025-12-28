@@ -3,7 +3,7 @@ import { jsx } from "./core/jsx.js";
 import { addRoute, navigate, replace } from "./core/route.js";
 import { handleRouteChange } from "./core/route.js";
 
-export const isHashchangeListening = { value: false };
+const isHashchangeListening = { value: false };
 
 window.addEventListener("popstate", () => {
   handleRouteChange(window.location.pathname);
