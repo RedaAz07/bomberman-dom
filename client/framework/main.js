@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, Store } from "./core/hooks.js";
 import { jsx } from "./core/jsx.js";
 import { addRoute, navigate, replace } from "./core/route.js";
 import { handleRouteChange } from "./core/route.js";
+
+export const isHashchangeListening = { value: false };
+
 window.addEventListener("popstate", () => {
   handleRouteChange(window.location.pathname);
 });
@@ -17,11 +20,21 @@ window.addEventListener("popstate", () => {
  * // Typically called internally, but can be called manually
  * startTransition();
  */
-export function startTransition(isHashchangeListening) {
-  if (isHashchangeListening) {
+export function startTransition() {
+  if (isHashchangeListening.value) {
     handleRouteChange();
     window.addEventListener("hashchange", handleRouteChange);
   }
   handleRouteChange(window.location.pathname);
 }
-export { useState, useEffect, useRef, jsx, addRoute, replace, Store, navigate };
+export {
+  useState,
+  useEffect,
+  useRef,
+  jsx,
+  addRoute,
+  replace,
+  Store,
+  navigate,
+  isHashchangeListening,
+};
