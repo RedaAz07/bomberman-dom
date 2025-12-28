@@ -32,13 +32,11 @@ let rooms = [];
  * @returns {Object} The created room object.
  */
 function createRoom() {
-  const { map, collisionMap } = generateMap(15, 15);
-
+  const map = generateMap(15, 15);
   const room = {
     id: rooms.length + 1,
     players: [],
     map,
-    collisionMap,
     disponible: true,
     gameState: {
       bombs: [],
@@ -82,7 +80,7 @@ function stopTimer(room) {
  * @param {Object} room - The room object.
  * @param {Object} obj - The message object to send.
  */
-function broadcastRoom(room, obj) {
+function broadcastRoom(room, obj) {  
   const msg = JSON.stringify(obj);
   for (const p of room.players) {
     if (p.socket.readyState === 1) {
@@ -90,7 +88,6 @@ function broadcastRoom(room, obj) {
     }
   }
 }
-
 
 /**
  * Starts the game start countdown timer.
@@ -290,11 +287,7 @@ function updateGame(room) {
       p.lastSync = { x: p.stats.x, y: p.stats.y, isMoving: false };
 
       // We check if position changed since LAST BROADCAST
-      if (
-        Math.abs(p.stats.x - p.lastSync.x) > 0.1 ||
-        Math.abs(p.stats.y - p.lastSync.y) > 0.1 ||
-        isMoving !== p.lastSync.isMoving
-      ) {
+      if (isMoving !== p.lastSync.isMoving) {
         shouldBroadcast = true;
       }
     }
@@ -317,10 +310,10 @@ function updateGame(room) {
         direction: p.inputs.ArrowUp
           ? "up"
           : p.inputs.ArrowDown
-            ? "down"
-            : p.inputs.ArrowLeft
-              ? "left"
-              : "right",
+          ? "down"
+          : p.inputs.ArrowLeft
+          ? "left"
+          : "right",
         isMoving: isMoving,
       };
     });
@@ -497,6 +490,7 @@ function handleExplosion(room, bomb) {
       }
       return true;
     }
+    //! hnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     if (cell === TILES.CRATE) {
       const loot =
         Math.random() < 0.4
@@ -542,9 +536,9 @@ function handleExplosion(room, bomb) {
  * @param {Object} room - The room object.
  */
 function cleanRoom(room) {
-  const { map, collisionMap } = generateMap(15, 15);
+  const map = generateMap(15, 15);
   room.map = map;
-  room.collisionMap = collisionMap;
+
   clearInterval(room.gameInterval);
   stopTimer(room);
   room.gameState.active = false;
@@ -616,7 +610,6 @@ const server = createServer(async (req, res) => {
     res.end(content);
   } catch (err) {
     if (Routes.includes(req.url)) {
-
       res.writeHead(302, { Location: "/" });
       res.end();
     } else {
@@ -638,18 +631,25 @@ wss.on("connection", (socket) => {
       return;
     }
 
-    if (data.type === "join") {
+    if (data.type === "join" && !socket.username) {
+      if (typeof data.username !== "string") return;
       const username = data.username.trim();
       let room = findOrCreateRoom();
-      if (!room || room.players.some((p) => p.username === username)) {
+      if (
+        room.players.some((p) => p.username === username) ||
+        username.length > 10 || username.length === 0
+      ) {
         return socket.send(
-          JSON.stringify({ type: "join-error", msg: "Username already exists" })
+          JSON.stringify({
+            type: "join-error",
+            msg: "invalid or duplicate username.",
+          })
         );
       }
       room.players.push({ username, socket, stats: {}, inputs: {} });
       socket.roomId = room.id;
       socket.username = username;
-      broadcastRoom(room, { type: "join-success" });
+      broadcastRoom(room, { type: "join-success", username: username });
       broadcastRoom(room, {
         type: "player-list",
         players: room.players.map((p) => p.username),
@@ -688,12 +688,15 @@ wss.on("connection", (socket) => {
         }
       }
     }
-    if (data.type === "message")
+    if (data.type === "message") {
+      if (typeof data.msg !== "string") return;
+      if (data.msg.trim().length > 20 || !data.msg.trim()) return;
       broadcastRoom(room, {
         type: "message",
         username: socket.username,
         msg: data.msg,
       });
+    }
   });
 
   socket.on("close", () => {

@@ -10,4 +10,5 @@ export function reconnect() {
     }
     // Re-assign the exported 'ws' variable to a new instance
     ws = new WebSocket("ws://localhost:3000");
+    window.ws = ws;
 }

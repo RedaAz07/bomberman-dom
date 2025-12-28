@@ -15,9 +15,8 @@ export function Join() {
    * Sends a join request to the server.
    * @param {Event} e - The event object.
    */
-  const handleJoin = (e) => {
-    if (!name.trim() || name.trim() >= 10) return;
-    ws.username = name.trim();
+  const handleJoin = (e) => {    
+    if (!name.trim() || name.trim().length > 10) return;
 
     ws.send(
       JSON.stringify({
@@ -35,6 +34,7 @@ export function Join() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "join-success") {
+        ws.username = data.username;
         navigate("/lobby");
       }
 

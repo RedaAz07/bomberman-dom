@@ -2,7 +2,6 @@ import { jsx, useState, useEffect, Store, replace } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
 export const store = Store({
   map: [],
-  collisionMap: [],
   bom: false,
   players: [],
 });
@@ -12,7 +11,7 @@ export const store = Store({
  * Displays connected players and chat.
  * @returns {Object} JSX element for the lobby.
  */
-export function Lobby() {
+export function Lobby() {  
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
@@ -50,7 +49,6 @@ export function Lobby() {
       if (data.type === "start-game") {
         store.set({
           map: data.map,
-          collisionMap: data.collisionMap,
           players: data.players,
           username: ws.username,
           time: data.time,
@@ -108,7 +106,12 @@ export function Lobby() {
           "ul",
           { className: "players-list" },
           ...players.map((p) => jsx("li", { className: "player-item" }, p))
-        ), jsx("div", { className: "player-count" }, "Total Players: " + players.length)
+        ),
+        jsx(
+          "div",
+          { className: "player-count" },
+          "Total Players: " + players.length
+        )
       ),
       jsx(
         "div",

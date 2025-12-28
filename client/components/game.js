@@ -104,6 +104,7 @@ export function game() {
     }, []);
     return jsx("div", null, "Redirecting to Join Page...");
   }
+
   const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [lives, setLives] = useState(3);
