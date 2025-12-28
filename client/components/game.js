@@ -96,7 +96,7 @@ export function game() {
 
   const [dead, setDead] = useState(false);
   const [gameResult, setGameResult] = useState(null);
-
+  const time = useRef(null);
   const bombElementsRef = useRef(new Map());
   const bombTimersRef = useRef(new Map());
   const explosionElementsRef = useRef(new Map());
@@ -231,7 +231,10 @@ export function game() {
             (p) => p.username === move.username
           );
           if (index === -1) return;
-
+          if (time.current) clearTimeout(time.current);
+          time.current = setTimeout(() => {
+            pState.isMoving = false;
+          }, 200);
           const pState = playerStateRef.current[index];
           const isMe = move.username === ws.username;
 
@@ -499,7 +502,7 @@ export function game() {
               className: "replay-button",
               onClick: () => window.location.reload(),
             },
-            "Rejouer"
+            "Play Again"
           )
         )
       )
