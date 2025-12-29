@@ -335,19 +335,14 @@ export function game() {
       }
     };
 
-    const width = 1500;
-    const height = 1500;
     /**
      * Resizes the game scale based on window size.
-     */
-    function handleResize() {
-      if (window.innerHeight >= 800 && window.innerWidth >= 1000) {
-        setScale(1);
-        return;
-      }
-      setScale(
-        Math.min(window.innerWidth / width, window.innerHeight / height)
-      );
+    */
+   const height = 900;
+   const width = 1200;
+   function handleResize() {
+      const scale = Math.min(window.innerWidth / width, window.innerHeight / height);
+      setScale(scale);
     }
     handleResize();
     window.addEventListener("resize", handleResize);

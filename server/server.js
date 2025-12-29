@@ -490,7 +490,6 @@ function handleExplosion(room, bomb) {
       }
       return true;
     }
-    //! hnaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     if (cell === TILES.CRATE) {
       const loot =
         Math.random() < 0.4
@@ -598,6 +597,16 @@ const server = createServer(async (req, res) => {
     }
 
     const fullPath = path.join(base, reqPath);
+
+    // Security: Prevent Directory Traversal
+    // Ensure the resolved path is still within the 'client' directory
+    const relative = path.relative(base, fullPath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      res.writeHead(403, { "Content-Type": "text/plain" });
+      res.end("403 Forbidden");
+      return;
+    }
+
     const ext = path.extname(fullPath);
     const type = mime[ext] || "text/plain";
     const isBinary = type.startsWith("image/");
@@ -690,7 +699,18 @@ wss.on("connection", (socket) => {
     }
     if (data.type === "message") {
       if (typeof data.msg !== "string") return;
-      if (data.msg.trim().length > 20 || !data.msg.trim()) return;
+      data.msg = data.msg.trim();
+      if (data.msg.length > 20 || !data.msg) return;
+
+      // Rate limiting: 1 message per second
+      if (player) {
+        const now = Date.now();
+        if (player.lastMessageTime && now - player.lastMessageTime < 1000) {
+          return;
+        }
+        player.lastMessageTime = now;
+      }
+
       broadcastRoom(room, {
         type: "message",
         username: socket.username,
