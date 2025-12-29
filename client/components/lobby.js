@@ -2,10 +2,12 @@ import {
   jsx,
   useState,
   useEffect,
+  useRef, // 1. Import useRef
   Store,
   replace,
 } from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
+
 export const store = Store({
   map: [],
   bom: false,
@@ -23,6 +25,10 @@ export function Lobby() {
   const [chat, setChat] = useState([]);
   const [sec, setSec] = useState(null);
   const [roomId, setRoomId] = useState(null);
+
+  // 2. Create a ref to track the last time a message was sent
+  const lastSentTime = useRef(0);
+
   if (!ws.username) {
     useEffect(() => {
       ws.close();
@@ -69,7 +75,16 @@ export function Lobby() {
    * @param {Event} e - The event object.
    */
   const sendMsg = (e) => {
+    // 3. THROTTLE LOGIC
+    const now = Date.now();
+    // If less than 1000ms (1 second) has passed since last message, stop here.
+    if (now - lastSentTime.current < 1000) return;
+
     if (!msg.trim() || msg.trim().length > 30) return;
+
+    // Update the last sent time
+    lastSentTime.current = now;
+
     ws.send(
       JSON.stringify({
         type: "message",
@@ -101,9 +116,11 @@ export function Lobby() {
         "span",
         {
           className: "timer-value",
-          style: { transform: `translate3d(0, 0, 0) scale(${sec !== null ? 1 : 0})`  },
+          style: {
+            transform: `translate3d(0, 0, 0) scale(${sec !== null ? 1 : 0})`,
+          },
         },
-        `${ sec ? sec : " " } Seconds`
+        `${sec ? sec : " "} Seconds`
       )
     ),
 

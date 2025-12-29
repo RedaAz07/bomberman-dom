@@ -178,8 +178,23 @@ export function game() {
    * @param {Event} e - The event object.
    */
   const sendMsg = (e) => {
+    // 3. THROTTLE LOGIC
+    const now = Date.now();
+    // If less than 1000ms (1 second) has passed since last message, stop here.
+    if (now - lastSentTime.current < 1000) return;
+
     if (!msg.trim() || msg.trim().length > 30) return;
-    if (ws.readyState === 1) ws.send(JSON.stringify({ type: "message", msg }));
+
+    // Update the last sent time
+    lastSentTime.current = now;
+
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        msg,
+      })
+    );
+
     setMsg("");
     e.target.value = "";
     if (e.key != "Enter") e.target.previousSibling.value = "";
@@ -337,11 +352,14 @@ export function game() {
 
     /**
      * Resizes the game scale based on window size.
-    */
-   const height = 900;
-   const width = 1200;
-   function handleResize() {
-      const scale = Math.min(window.innerWidth / width, window.innerHeight / height);
+     */
+    const height = 900;
+    const width = 1200;
+    function handleResize() {
+      const scale = Math.min(
+        window.innerWidth / width,
+        window.innerHeight / height
+      );
       setScale(scale);
     }
     handleResize();
@@ -457,7 +475,6 @@ export function game() {
           ref.current.style.transform = `translate3d(${pState.x}px, ${pState.y}px, 0)`;
 
           if (pState.isMoving) {
-
             let key = "ArrowDown";
             if (pState.direction === "up") key = "ArrowUp";
             if (pState.direction === "left") key = "ArrowLeft";
@@ -512,208 +529,208 @@ export function game() {
 
   return gameResult
     ? jsx(
-      "div",
-      { className: "game-result" },
-      jsx(
         "div",
-        { className: "result-content" },
+        { className: "game-result" },
         jsx(
           "div",
-          { className: "result-icon animation" },
-          gameResult.type === "win"
-            ? "🎉"
-            : gameResult.type === "draw"
+          { className: "result-content" },
+          jsx(
+            "div",
+            { className: "result-icon animation" },
+            gameResult.type === "win"
+              ? "🎉"
+              : gameResult.type === "draw"
               ? "🤝"
               : "💀"
-        ),
-        jsx(
-          "p",
-          { className: "result-message" },
-          gameResult.type === "win"
-            ? `Congratulations ${gameResult.username}, You Win!`
-            : gameResult.type === "draw"
+          ),
+          jsx(
+            "p",
+            { className: "result-message" },
+            gameResult.type === "win"
+              ? `Congratulations ${gameResult.username}, You Win!`
+              : gameResult.type === "draw"
               ? "It's a Draw! No one wins."
               : `Sorry, You Lose. Winner is ${winner}`
-        ),
-        jsx(
-          "button",
-          {
-            className: "replay-button",
-            onClick: () => window.location.reload(),
-          },
-          "Play Again"
+          ),
+          jsx(
+            "button",
+            {
+              className: "replay-button",
+              onClick: () => window.location.reload(),
+            },
+            "Play Again"
+          )
         )
       )
-    )
     : jsx(
-      "div",
-      {
-        className: "game-container",
-        style: {
-          transform: `scale(${scale})`,
-          transformOrigin: "center center",
-          imageRendering: "pixelated",
-        },
-        onKeydown: handleKeyDown,
-        onKeyup: handleKeyUp,
-        autoFocus: true,
-        tabIndex: 0,
-      },
-      jsx(
         "div",
-        { className: "game-hud-container" },
+        {
+          className: "game-container",
+          style: {
+            transform: `scale(${scale})`,
+            transformOrigin: "center center",
+            imageRendering: "pixelated",
+          },
+          onKeydown: handleKeyDown,
+          onKeyup: handleKeyUp,
+          autoFocus: true,
+          tabIndex: 0,
+        },
         jsx(
           "div",
-          { className: "hud-section player-info" },
-          jsx("div", { className: "hud-label" }, "PLAYER"),
+          { className: "game-hud-container" },
           jsx(
             "div",
-            { className: "hud-value player-name" },
-            ws.username || "Guest"
-          )
-        ),
-        jsx(
-          "div",
-          { className: "hud-bottom" },
-          jsx(
-            "div",
-            { className: "hud-stat lives-stat" },
-            jsx("div", { className: "stat-icon animation" }, "❤️"),
+            { className: "hud-section player-info" },
+            jsx("div", { className: "hud-label" }, "PLAYER"),
             jsx(
               "div",
-              { className: "stat-info" },
-              jsx("div", { className: "stat-label" }, "LIVES"),
+              { className: "hud-value player-name" },
+              ws.username || "Guest"
+            )
+          ),
+          jsx(
+            "div",
+            { className: "hud-bottom" },
+            jsx(
+              "div",
+              { className: "hud-stat lives-stat" },
+              jsx("div", { className: "stat-icon animation" }, "❤️"),
               jsx(
                 "div",
-                { className: "stat-value" },
+                { className: "stat-info" },
+                jsx("div", { className: "stat-label" }, "LIVES"),
                 jsx(
                   "div",
-                  { className: "hearts-container" },
-                  ...Array.from({ length: lives }, (_, i) =>
-                    jsx("span", { className: "heart", key: i }, "❤️")
+                  { className: "stat-value" },
+                  jsx(
+                    "div",
+                    { className: "hearts-container" },
+                    ...Array.from({ length: lives }, (_, i) =>
+                      jsx("span", { className: "heart", key: i }, "❤️")
+                    )
                   )
                 )
               )
+            ),
+            jsx(
+              "div",
+              { className: "hud-stat bombs-stat" },
+              jsx("div", { className: "stat-icon" }, "💣"),
+              jsx(
+                "div",
+                { className: "stat-info" },
+                jsx("div", { className: "stat-label" }, "BOMBS"),
+                jsx("div", { className: "stat-value bombs-count" }, bombs)
+              )
+            ),
+            jsx(
+              "div",
+              { className: "hud-stat range-stat" },
+              jsx("div", { className: "stat-icon" }, "💥"),
+              jsx(
+                "div",
+                { className: "stat-info" },
+                jsx("div", { className: "stat-label" }, "RANGE"),
+                jsx("div", { className: "stat-value" }, bombRange)
+              )
+            ),
+            jsx(
+              "div",
+              { className: "hud-stat players-stat" },
+              jsx("div", { className: "stat-icon" }, "⚡"),
+              jsx(
+                "div",
+                { className: "stat-info" },
+                jsx("div", { className: "stat-label" }, "SPEED"),
+                jsx("div", { className: "stat-value" }, speedLevel)
+              )
             )
           ),
           jsx(
             "div",
-            { className: "hud-stat bombs-stat" },
-            jsx("div", { className: "stat-icon" }, "💣"),
+            { className: "hud-section1" },
+            jsx("div", { className: "timer-icon" }, "⏱️"),
             jsx(
               "div",
-              { className: "stat-info" },
-              jsx("div", { className: "stat-label" }, "BOMBS"),
-              jsx("div", { className: "stat-value bombs-count" }, bombs)
-            )
-          ),
-          jsx(
-            "div",
-            { className: "hud-stat range-stat" },
-            jsx("div", { className: "stat-icon" }, "💥"),
-            jsx(
-              "div",
-              { className: "stat-info" },
-              jsx("div", { className: "stat-label" }, "RANGE"),
-              jsx("div", { className: "stat-value" }, bombRange)
-            )
-          ),
-          jsx(
-            "div",
-            { className: "hud-stat players-stat" },
-            jsx("div", { className: "stat-icon" }, "⚡"),
-            jsx(
-              "div",
-              { className: "stat-info" },
-              jsx("div", { className: "stat-label" }, "SPEED"),
-              jsx("div", { className: "stat-value" }, speedLevel)
+              { className: "timer-display" },
+              // OPTIMIZATION: Timer Ref instead of state
+              jsx("div", { className: "timer-value1", ref: timerRef }, "00:00")
             )
           )
         ),
         jsx(
           "div",
-          { className: "hud-section1" },
-          jsx("div", { className: "timer-icon" }, "⏱️"),
+          { className: "combine-chat-map" },
           jsx(
             "div",
-            { className: "timer-display" },
-            // OPTIMIZATION: Timer Ref instead of state
-            jsx("div", { className: "timer-value1", ref: timerRef }, "00:00")
-          )
-        )
-      ),
-      jsx(
-        "div",
-        { className: "combine-chat-map" },
-        jsx(
-          "div",
-          { className: "map-container", ref: mapRef },
-          ...playersList.map((p, i) => {
-            const Me = p.username == ws.username;
-            return jsx(
-              "div",
-              {
-                className: `player player${i}`,
-                style: {
-                  top: "0px",
-                  left: "0px",
-                  transform: "translate3d(0,0,0)",
+            { className: "map-container", ref: mapRef },
+            ...playersList.map((p, i) => {
+              const Me = p.username == ws.username;
+              return jsx(
+                "div",
+                {
+                  className: `player player${i}`,
+                  style: {
+                    top: "0px",
+                    left: "0px",
+                    transform: "translate3d(0,0,0)",
+                  },
+                  key: `${p.username}`,
+                  ref: playersRef[i],
                 },
-                key: `${p.username}`,
-                ref: playersRef[i],
-              },
+                jsx(
+                  "div",
+                  { className: "player-label" },
+                  !Me &&
+                    jsx("span", { className: "player-username" }, p.username)
+                )
+              );
+            }),
+            ...grid.map((row, rowIndex) =>
               jsx(
                 "div",
-                { className: "player-label" },
-                !Me &&
-                jsx("span", { className: "player-username" }, p.username)
-              )
-            );
-          }),
-          ...grid.map((row, rowIndex) =>
-            jsx(
-              "div",
-              { className: "map-row" },
-              ...row.map((cell, colIndex) =>
-                cell === 6
-                  ? jsx("div", {
-                    className: "tile tile-explosion",
-                    style: getTileStyle(rowIndex, colIndex, cell),
-                    "data-row": rowIndex,
-                    "data-col": colIndex,
-                    key: `${rowIndex}-${colIndex}`,
-                    ref: (el) => {
-                      const key = `${rowIndex}-${colIndex}`;
-                      if (el) explosionElementsRef.current.set(key, el);
-                      else explosionElementsRef.current.delete(key);
-                    },
-                  })
-                  : cell === 5
+                { className: "map-row" },
+                ...row.map((cell, colIndex) =>
+                  cell === 6
                     ? jsx("div", {
-                      className: "tile tile-bomb",
-                      style: getTileStyle(rowIndex, colIndex, cell),
-                      "data-row": rowIndex,
-                      "data-col": colIndex,
-                      key: `${rowIndex}-${colIndex}`,
-                      ref: (el) => {
-                        const key = `${rowIndex}-${colIndex}`;
-                        if (el && el.classList.contains("tile-bomb")) {
-                          bombElementsRef.current.set(key, el);
-                        } else {
-                          bombElementsRef.current.delete(key);
-                          bombTimersRef.current.delete(key);
-                        }
-                      },
-                    })
+                        className: "tile tile-explosion",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${rowIndex}-${colIndex}`,
+                        ref: (el) => {
+                          const key = `${rowIndex}-${colIndex}`;
+                          if (el) explosionElementsRef.current.set(key, el);
+                          else explosionElementsRef.current.delete(key);
+                        },
+                      })
+                    : cell === 5
+                    ? jsx("div", {
+                        className: "tile tile-bomb",
+                        style: getTileStyle(rowIndex, colIndex, cell),
+                        "data-row": rowIndex,
+                        "data-col": colIndex,
+                        key: `${rowIndex}-${colIndex}`,
+                        ref: (el) => {
+                          const key = `${rowIndex}-${colIndex}`;
+                          if (el && el.classList.contains("tile-bomb")) {
+                            bombElementsRef.current.set(key, el);
+                          } else {
+                            bombElementsRef.current.delete(key);
+                            bombTimersRef.current.delete(key);
+                          }
+                        },
+                      })
                     : cell == 2 || cell >= 7
-                      ? jsx("div", {
+                    ? jsx("div", {
                         className: tileClass[cell],
                         style: getTileStyle(rowIndex, colIndex, cell),
                         "data-row": rowIndex,
                         "data-col": colIndex,
                         key: `${`${rowIndex}-${colIndex}`}`,
                       })
-                      : jsx("div", {
+                    : jsx("div", {
                         className: tileClass[cell],
                         style: getTileStyle(rowIndex, colIndex, cell),
                         "data-row": rowIndex,
@@ -727,44 +744,44 @@ export function game() {
                           explosionElementsRef.current.delete(key);
                         },
                       })
-              )
-            )
-          )
-        ),
-        jsx(
-          "div",
-          { className: "chat-section-game" },
-          jsx(
-            "div",
-            { className: "chat-messages" },
-            ...chat.map((c) =>
-              jsx(
-                "div",
-                { className: "chat-message" },
-                jsx("span", { className: "username" }, c.username + ": "),
-                jsx("span", null, c.msg)
+                )
               )
             )
           ),
           jsx(
             "div",
-            { className: "chat-input-container" },
-            jsx("input", {
-              type: "text",
-              value: msg,
-              placeholder: "Type your message...",
-              oninput: (e) => {
-                e.stopPropagation();
-                setMsg(e.target.value);
-              },
-              onkeypress: (e) => {
-                e.stopPropagation();
-                if (e.key === "Enter") sendMsg(e);
-              },
-            }),
-            jsx("button", { onclick: (e) => sendMsg(e) }, "Send")
+            { className: "chat-section-game" },
+            jsx(
+              "div",
+              { className: "chat-messages" },
+              ...chat.map((c) =>
+                jsx(
+                  "div",
+                  { className: "chat-message" },
+                  jsx("span", { className: "username" }, c.username + ": "),
+                  jsx("span", null, c.msg)
+                )
+              )
+            ),
+            jsx(
+              "div",
+              { className: "chat-input-container" },
+              jsx("input", {
+                type: "text",
+                value: msg,
+                placeholder: "Type your message...",
+                oninput: (e) => {
+                  e.stopPropagation();
+                  setMsg(e.target.value);
+                },
+                onkeypress: (e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") sendMsg(e);
+                },
+              }),
+              jsx("button", { onclick: (e) => sendMsg(e) }, "Send")
+            )
           )
         )
-      )
-    );
+      );
 }
