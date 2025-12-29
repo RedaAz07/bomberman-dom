@@ -8,7 +8,7 @@
 }
 
 body {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: #16213e;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -29,7 +29,7 @@ body {
   justify-content: center;
   align-items: center;
   /* Optimization: Static fallback background */
-  background-color: #1a1a2e;
+  background-color: #1b1d3900;
 }
 
 .combine-chat-map {
@@ -49,8 +49,6 @@ body {
   height: 750px;
   object-fit: contain;
   background-color: #2e3857;
-  /* Optimization: Reduced shadow complexity */
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .tile {
@@ -104,11 +102,10 @@ body {
 .container {
   max-width: 900px;
   width: 100%;
-  background: linear-gradient(145deg, #2d3561 0%, #1f2749 100%);
+  background: #1f2749;
   border: 4px solid #4a9eff;
-  border-radius: 15px;
   padding: 30px;
-  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+  border-radius: 15px;
 }
 
 .lobby-wrapper {
@@ -224,25 +221,23 @@ button {
   width: 100%;
   padding: 15px;
   font-size: 14px;
-  background: linear-gradient(145deg, #4a9eff 0%, #3a7ed8 100%);
+  background: #3a7ed8;
   border: 3px solid #6eb4ff;
   border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
   transition: transform 0.1s ease;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 4px 0 #2d5fa8;
   will-change: transform;
 }
 
 button:hover {
-  background: linear-gradient(145deg, #6eb4ff 0%, #4a9eff 100%);
+  background: #6eb4ff;
   transform: translateY(-2px);
 }
 
 button:active {
   transform: translateY(2px);
-  box-shadow: 0 2px 0 #2d5fa8;
 }
 
 .join-button {
@@ -263,7 +258,7 @@ button:active {
     transform: scale(1.05);
   }
 }
-.player-count{
+.player-count {
   position: absolute;
   bottom: 10px;
   right: 50%;
@@ -315,6 +310,7 @@ p[style*="color: red"],
   justify-content: center;
   gap: 10px;
   margin-bottom: 10px;
+  will-change: transform;
 }
 
 .timer-label {
@@ -368,7 +364,7 @@ p[style*="color: red"],
   margin: 8px 0;
   font-size: 11px;
   color: #ffffff;
-  background: linear-gradient(145deg, #2d3561 0%, #253050 100%);
+  background: #253050;
   border-left: 4px solid #4a9eff;
   border-radius: 6px;
   display: flex;
@@ -403,14 +399,14 @@ p[style*="color: red"],
   align-items: center;
   gap: 12px;
   padding: 10px;
-  background: linear-gradient(145deg, #2d3561 0%, #253050 100%);
+  background: #253050;
   border-radius: 8px;
   border-left: 3px solid #6eb4ff;
   transition: transform 0.2s ease;
 }
 
 .rule-item:hover {
-  background: linear-gradient(145deg, #3a4571 0%, #2d3861 100%);
+  background: #2d3861;
   transform: translateX(5px);
   border-left-color: #4a9eff;
 }
@@ -439,7 +435,6 @@ p[style*="color: red"],
   border: 3px solid #4a9eff;
   border-radius: 10px;
   padding: 20px;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .chat-section {
@@ -459,6 +454,8 @@ p[style*="color: red"],
   padding: 10px;
   background: #16213e;
   border-radius: 8px;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .chat-message {
@@ -466,7 +463,7 @@ p[style*="color: red"],
   margin: 10px 0;
   font-size: 10px;
   color: #ffffff;
-  background: linear-gradient(145deg, #2d3561 0%, #253050 100%);
+  background: #253050;
   border-radius: 8px;
   border-left: 3px solid #6eb4ff;
   word-wrap: break-word;
@@ -633,9 +630,6 @@ p[style*="color: red"],
   background: rgba(255, 107, 107, 0.9);
   border: 2px solid #ff6b6b;
   border-radius: 12px;
-  /* Optimization: Simplified shadow */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   font-weight: bold;
 }
 
@@ -860,7 +854,6 @@ p[style*="color: red"],
   border-radius: 10px;
   cursor: pointer;
   transition: transform 0.2s ease;
-  box-shadow: 0 4px 0 #2d5fa8;
 }
 
 .replay-button:hover {
@@ -869,11 +862,6 @@ p[style*="color: red"],
 }
 .replay-button:active {
   transform: translateY(0);
-  box-shadow: 0 2px 0 #2d5fa8;
-}
-
-.container {
-  box-shadow: 0 0 8px rgba(74, 158, 255, 0.25);
 }
 
 .info-item {
@@ -881,20 +869,11 @@ p[style*="color: red"],
 }
 
 button {
-  box-shadow: 0 2px 0 #2d5fa8;
   will-change: transform;
-}
-
-.player-username {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .rule-item {
   transition: transform 0.15s ease;
-}
-
-.map-container {
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
 }
 
 .player {

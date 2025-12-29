@@ -148,7 +148,7 @@ export function game() {
         y: start.y,
         targetX: start.x,
         targetY: start.y,
-        direction: "down",
+        direction: "up",
         isMoving: false,
         frame: 0,
         animTime: 0,

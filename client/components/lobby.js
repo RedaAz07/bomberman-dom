@@ -1,4 +1,10 @@
-import { jsx, useState, useEffect, Store, replace } from "../framework/main.js";
+import {
+  jsx,
+  useState,
+  useEffect,
+  Store,
+  replace,
+} from "../framework/main.js";
 import { ws } from "../assets/js/ws.js";
 export const store = Store({
   map: [],
@@ -11,7 +17,7 @@ export const store = Store({
  * Displays connected players and chat.
  * @returns {Object} JSX element for the lobby.
  */
-export function Lobby() {  
+export function Lobby() {
   const [msg, setMsg] = useState("");
   const [players, setPlayers] = useState([]);
   const [chat, setChat] = useState([]);
@@ -80,19 +86,25 @@ export function Lobby() {
     "div",
     { className: "container lobby-wrapper" },
 
-    roomId !== null &&
     jsx(
       "div",
       { className: "room-id" },
       "Welcome to game lobby (Room: " + roomId + ")"
     ),
-    sec !== null &&
     jsx(
       "div",
-      { className: "countdown-timer" },
+      {
+        className: "countdown-timer",
+      },
       jsx("span", { className: "timer-label" }, "Game Starting In"),
-      jsx("span", { className: "timer-value" }, sec),
-      jsx("span", { className: "timer-label" }, "seconds")
+      jsx(
+        "span",
+        {
+          className: "timer-value",
+          style: { transform: `translate3d(0, 0, 0) scale(${sec !== null ? 1 : 0})`  },
+        },
+        `${ sec ? sec : " " } Seconds`
+      )
     ),
 
     jsx(
