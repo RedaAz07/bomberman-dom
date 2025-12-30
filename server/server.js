@@ -636,7 +636,7 @@ wss.on("connection", (socket) => {
     try {
       data = JSON.parse(raw);
     } catch (err) {
-      console.error("Error parsing WebSocket message:", err);
+      console.log("Error parsing WebSocket message");
       return;
     }
 

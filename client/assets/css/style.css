@@ -65,18 +65,23 @@ body {
 .tile-grass {
   background-image: url("../images/1.png");
 }
+
 .tile-wall-corner {
   background-image: url("../images/2.png");
 }
+
 .tile-wall-vertical {
   background-image: url("../images/3.png");
 }
+
 .tile-wall-horizontal {
   background-image: url("../images/3.png");
 }
+
 .tile-braml {
   background-image: url("../images/4.png");
 }
+
 .tile-stone {
   background-image: url("../images/5.png");
 }
@@ -156,7 +161,8 @@ body {
   border-radius: 8px;
   border: 2px solid rgba(74, 158, 255, 0.2);
   transition: transform 0.2s ease, background-color 0.2s ease;
-  will-change: transform; /* Performance Hint */
+  will-change: transform;
+  /* Performance Hint */
 }
 
 .info-item:hover {
@@ -250,14 +256,17 @@ button:active {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
 }
+
 .player-count {
   position: absolute;
   bottom: 10px;
@@ -297,6 +306,7 @@ p[style*="color: red"],
   margin-bottom: 15px;
   font-size: 28px;
 }
+
 .room-id {
   font-size: 15px;
   color: #9db4ff;
@@ -441,6 +451,7 @@ p[style*="color: red"],
   height: 400px;
   width: 50%;
 }
+
 .chat-section-game {
   height: 750px;
   width: 400px;
@@ -479,11 +490,13 @@ p[style*="color: red"],
   display: flex;
   gap: 10px;
 }
+
 .chat-input-container input {
   flex: 1;
   margin-bottom: 0;
   font-size: 11px;
 }
+
 .chat-input-container button {
   width: auto;
   padding: 15px 25px;
@@ -496,92 +509,118 @@ p[style*="color: red"],
   .lobby-container {
     grid-template-columns: 1fr;
   }
+
   .bottom-panel {
     flex-direction: column;
   }
+
   .chat-section,
   .rules-section {
     width: 100%;
   }
+
   .lobby-header h1 {
     font-size: 20px;
   }
+
   .countdown-timer {
     flex-direction: column;
     gap: 5px;
   }
+
   .timer-value {
     font-size: 24px;
   }
+
   .players-section,
   .rules-section {
     min-height: auto;
   }
+
   .players-list {
     max-height: 150px;
   }
+
   .rule-icon {
     min-width: 50px;
     font-size: 14px;
   }
+
   .rule-text {
     font-size: 9px;
   }
+
   h1 {
     font-size: 18px;
   }
+
   h2 {
     font-size: 14px;
   }
+
   h3 {
     font-size: 12px;
   }
+
   input[type="text"],
   button {
     font-size: 10px;
     padding: 12px;
   }
+
   .container {
     padding: 20px;
   }
+
   .player-item,
   .chat-message {
     font-size: 9px;
   }
+
   .hud-top {
     padding: 15px 20px;
   }
+
   .hud-label {
     font-size: 8px;
   }
+
   .hud-value {
     font-size: 14px;
   }
+
   .timer-icon {
     font-size: 24px;
   }
+
   .timer-value1 {
     font-size: 18px;
     min-width: 60px;
   }
+
   .hud-bottom {
     flex-wrap: wrap;
     gap: 15px;
     padding: 12px 20px;
   }
+
   .hud-stat {
     padding: 8px 15px;
     gap: 8px;
   }
+
   .stat-icon {
     font-size: 22px;
   }
+
   .stat-label {
     font-size: 8px;
   }
+
   .stat-value {
     font-size: 16px;
   }
+
   .heart {
     font-size: 14px;
   }
@@ -595,20 +634,25 @@ p[style*="color: red"],
   height: 64px;
   background-repeat: no-repeat;
   image-rendering: pixelated;
-  transform: translate3d(0, 0, 0); /* Force GPU layer */
+  transform: translate3d(0, 0, 0);
+  /* Force GPU layer */
   z-index: 200;
-  will-change: transform; /* Important for performance */
+  will-change: transform;
+  /* Important for performance */
 }
 
 .player0 {
   background-image: url("../images/player0.png");
 }
+
 .player1 {
   background-image: url("../images/player1.png");
 }
+
 .player2 {
   background-image: url("../images/player2.png");
 }
+
 .player3 {
   background-image: url("../images/player3.png");
 }
@@ -638,14 +682,17 @@ p[style*="color: red"],
   background: #4a9eff;
   border-color: #4a9eff;
 }
+
 .player1 .player-username {
   background: #4eff8e;
   border-color: #4eff8e;
 }
+
 .player2 .player-username {
   background: #ffbb4a;
   border-color: #ffbb4a;
 }
+
 .player3 .player-username {
   background: #bb6eff;
   border-color: #bb6eff;
@@ -681,6 +728,7 @@ p[style*="color: red"],
   color: #4a9eff;
   text-shadow: 0 0 5px rgba(74, 158, 255, 0.8);
 }
+
 .timer-icon {
   font-size: 32px;
 }
@@ -732,48 +780,61 @@ p[style*="color: red"],
 .bombs-count {
   color: #ff6b6b;
 }
+
 .lives-stat {
   border-color: rgba(255, 107, 107, 0.3);
 }
+
 .lives-stat:hover {
   border-color: #ff6b6b;
 }
+
 .bombs-stat {
   border-color: rgba(255, 107, 107, 0.3);
 }
+
 .bombs-stat:hover {
   border-color: #ff6b6b;
 }
+
 .range-stat {
   border-color: rgba(255, 158, 74, 0.3);
 }
+
 .range-stat:hover {
   border-color: #ff9e4a;
 }
+
 .players-stat {
   border-color: rgba(78, 255, 142, 0.3);
 }
+
 .players-stat:hover {
   border-color: #4eff8e;
 }
+
 .stat-icon {
   font-size: 28px;
 }
+
 .stat-info {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
+
 .stat-label {
   font-size: 9px;
   color: #9db4ff;
   letter-spacing: 1px;
 }
+
 .stat-value {
   font-size: 20px;
   color: #ffffff;
   font-weight: bold;
 }
+
 .hud-bottom {
   display: flex;
   justify-content: center;
@@ -781,15 +842,18 @@ p[style*="color: red"],
   gap: 15px;
   width: fit-content;
 }
+
 .player-name {
   color: #6eb4ff;
   font-size: 16px;
 }
+
 .hud-label {
   font-size: 10px;
   color: #9db4ff;
   letter-spacing: 2px;
 }
+
 .hud-section {
   flex-direction: column;
 }
@@ -860,6 +924,7 @@ p[style*="color: red"],
   transform: translateY(-2px);
   background: #6bb3ff;
 }
+
 .replay-button:active {
   transform: translateY(0);
 }
@@ -879,4 +944,30 @@ button {
 .player {
   transform: translate3d(0, 0, 0);
   will-change: transform;
+}
+
+.hit {
+  animation: hitFlash 2s ease;
+}
+
+@keyframes hitFlash {
+  0% {
+    opacity: 1;
+  }
+
+  25% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  75% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
