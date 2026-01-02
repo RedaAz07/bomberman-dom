@@ -128,6 +128,7 @@ export function game() {
   const playersList = store.get().players;
   const [grid, setGrid] = useState(map);
   const latestGridRef = useRef(map);
+  const lastSentTime = useRef(0);
 
   const playerStateRef = useRef(
     playersList.map((_, i) => {
